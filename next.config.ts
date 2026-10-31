@@ -15,6 +15,18 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  
+  // 👇 এই নতুন অংশটুকু যোগ করুন
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        port: "",
+        pathname: "/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
