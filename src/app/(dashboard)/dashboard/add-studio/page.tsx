@@ -132,11 +132,11 @@ export default function AddStudioPage() {
 
                 <FormField control={form.control} name="location" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location (City, Neighborhood, Address) *</FormLabel>
+                    <FormLabel>Location (District, Riyadh) *</FormLabel>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
                       <FormControl>
-                        <Input placeholder="e.g. DUMBO, Brooklyn, NY" className="pl-9 bg-slate-950 border-slate-700" {...field} />
+                        <Input placeholder="e.g. Jax District, Diriyah, Riyadh" className="pl-9 bg-slate-950 border-slate-700" {...field} />
                       </FormControl>
                     </div>
                     <FormMessage />
@@ -169,7 +169,7 @@ export default function AddStudioPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FormField control={form.control} name="hourlyRate" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hourly Rate ($ USD) *</FormLabel>
+                    <FormLabel>Hourly Rate (SAR) *</FormLabel>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
                       <FormControl>
@@ -182,7 +182,7 @@ export default function AddStudioPage() {
 
                 <FormField control={form.control} name="securityDeposit" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Security Deposit ($ USD) *</FormLabel>
+                    <FormLabel>Security Deposit (SAR) *</FormLabel>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
                       <FormControl>

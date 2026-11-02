@@ -41,7 +41,7 @@ export const bookingSteps: Step[] = [
     number: "04",
     title: "Create & Produce",
     description:
-      "Step into a fully prepped, sanitized workspace equipped with certified gear and $1M production liability coverage.",
+      "Step into a fully prepped, sanitized workspace equipped with certified gear and comprehensive liability coverage.",
   },
 ];
 
@@ -68,7 +68,7 @@ export const hostingSteps: Step[] = [
 
 export const guarantees: Guarantee[] = [
   {
-    title: "$1M Liability Protection",
+    title: "SAR 3.5M Liability Protection",
     description:
       "Every reservation is safeguarded against property damage and third-party liabilities at no extra charge.",
     icon: ShieldCheck,

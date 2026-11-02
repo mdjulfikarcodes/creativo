@@ -119,9 +119,9 @@ export default function Footer() {
             </Link>
 
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-gray-400">
-              The premier SaaS studio rental marketplace connecting
-              photographers, filmmakers, podcasters, and sound designers with
-              certified, production-ready creative spaces worldwide.
+              The premier studio rental marketplace connecting photographers,
+              filmmakers, podcasters, and creators with certified,
+              production-ready creative spaces across Riyadh.
             </p>
 
             <div className="mt-6 flex items-center gap-3">

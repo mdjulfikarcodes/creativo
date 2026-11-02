@@ -116,7 +116,7 @@ export default function Navbar() {
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-3 focus:outline-none"
               >
-                <div className="h-9 w-9 overflow-hidden rounded-full border border-gray-600">
+                <div className="h-9 w-9 overflow-hidden rounded-full ring-2 ring-[#8b5cf6] ring-offset-2 ring-offset-[#0a0a0a]">
                   <img 
                     src="https://i.pravatar.cc/150?u=a042581f4e29026024d" 
                     alt="User Avatar" 
