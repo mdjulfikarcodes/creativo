@@ -47,24 +47,6 @@ export default function StudioCard({
           {studio.category}
         </Link>
 
-        <button
-          type="button"
-          aria-label={
-            studio.saved
-              ? `Remove ${studio.title} from saved studios`
-              : `Save ${studio.title}`
-          }
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-md transition-transform hover:scale-105"
-        >
-          <Heart
-            className={
-              studio.saved
-                ? "h-4 w-4 fill-[#8b5cf6] text-[#8b5cf6]"
-                : "h-4 w-4 text-gray-900"
-            }
-          />
-        </button>
-
         <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
           <Users className="h-3.5 w-3.5" />
           Up to {studio.capacity}

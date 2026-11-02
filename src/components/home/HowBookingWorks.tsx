@@ -1,5 +1,5 @@
 import { StepCard } from "@/components/cards";
-import SectionHeading from "@/components/SectionHeading";
+import SectionHeading from "@/components/shared/SectionHeading";
 import { bookingSteps } from "@/lib/data/content";
 
 export default function HowBookingWorks() {

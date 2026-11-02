@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import HowBookingWorks from "@/components/HowBookingWorks";
-import HostGuarantee from "@/components/HostGuarantee";
+import HowBookingWorks from "@/components/home/HowBookingWorks";
+import HostGuarantee from "@/components/home/HostGuarantee";
 
 export const metadata: Metadata = {
   title: "How It Works",

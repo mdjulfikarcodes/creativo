@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { StudioCard } from "@/components/cards";
-import SectionHeading from "@/components/SectionHeading";
+import SectionHeading from "@/components/shared/SectionHeading";
 import { featuredStudios } from "@/lib/data/studios";
 
 export default function FeaturedStudios() {

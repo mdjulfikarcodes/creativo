@@ -9,6 +9,7 @@ export default function Navbar() {
   // Mock authentication state (Replace with your BetterAuth/Auth context later)
   const [isAuthenticated, setIsAuthenticated] = useState(true); 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -20,6 +21,31 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#0a0a0a]">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+
+        {/* Mobile: Hamburger Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen((open) => !open)}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-300 transition-colors hover:bg-white/5 hover:text-white md:hidden"
+            aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-menu"
+          >
+            {isMobileMenuOpen ? (
+              /* Close Icon */
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            ) : (
+              /* Hamburger Icon */
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 6h16" />
+                <path d="M4 12h16" />
+                <path d="M4 18h16" />
+              </svg>
+            )}
+          </button>
         
         {/* Left: Logo */}
         <div className="flex items-center gap-3">
@@ -63,7 +89,7 @@ export default function Navbar() {
         </div>
 
         {/* Right: Actions (Theme + Auth) */}
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-3 md:gap-5">
           
           {/* Theme Toggle (Challenge 3) */}
           <button 
@@ -124,7 +150,7 @@ export default function Navbar() {
             </div>
           ) : (
             /* Unauthenticated State */
-            <div className="flex items-center gap-3">
+            <div className="hidden items-center gap-3 md:flex">
               <Link href="/login" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
                 Login
               </Link>
@@ -133,8 +159,57 @@ export default function Navbar() {
               </Link>
             </div>
           )}
+
+          
         </div>
       </div>
+
+      {/* Mobile Menu Panel */}
+      {isMobileMenuOpen && (
+        <div id="mobile-menu" className="border-t border-white/5 md:hidden">
+          <div className="space-y-1 px-4 py-4 sm:px-6">
+            {navLinks.map((link) => {
+              const isActive =
+                link.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-white/5 hover:text-white ${
+                    isActive
+                      ? "bg-white/5 text-white"
+                      : "text-gray-400"
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
+
+            {!isAuthenticated && (
+              <div className="mt-3 flex flex-col gap-2 border-t border-white/10 pt-3">
+                <Link
+                  href="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:bg-white/5 hover:text-white"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block rounded-lg bg-[#8b5cf6] px-3 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-[#7c3aed]"
+                >
+                  Register
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import AboutPage from "@/components/About";
+import AboutPage from "@/components/shared/About";
 
 export const metadata: Metadata = {
   title: "About Us",

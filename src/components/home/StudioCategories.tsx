@@ -1,5 +1,5 @@
 import { CategoryCard } from "@/components/cards";
-import SectionHeading from "@/components/SectionHeading";
+import SectionHeading from "@/components/shared/SectionHeading";
 import { studioCategories } from "@/lib/data/categories";
 
 export default function StudioCategories() {

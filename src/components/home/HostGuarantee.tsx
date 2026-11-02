@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { GuaranteeCard } from "@/components/cards";
-import SectionHeading from "@/components/SectionHeading";
+import SectionHeading from "@/components/shared/SectionHeading";
 import { guarantees } from "@/lib/data/content";
 
 export default function HostGuarantee() {

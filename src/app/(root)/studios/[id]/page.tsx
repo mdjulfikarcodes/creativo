@@ -5,16 +5,16 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Check, MapPin, Star, Users } from "lucide-react";
 
 import { StudioCard } from "@/components/cards";
-import SectionHeading from "@/components/SectionHeading";
+import SectionHeading from "@/components/shared/SectionHeading";
 import {
   getCategoryBySlug,
   getCategoryHref,
 } from "@/lib/data/categories";
+import { studios } from "@/lib/data/studios";
 import {
   getSimilarStudios,
   getStudioById,
-  studios,
-} from "@/lib/data/studios";
+} from "@/lib/api/studios";
 
 type StudioPageProps = {
   params: Promise<{ id: string }>;
@@ -28,7 +28,7 @@ export async function generateMetadata({
   params,
 }: StudioPageProps): Promise<Metadata> {
   const { id } = await params;
-  const studio = getStudioById(id);
+  const studio = await getStudioById(id);
 
   if (!studio) {
     return { title: "Studio Not Found" };
@@ -42,14 +42,14 @@ export async function generateMetadata({
 
 export default async function StudioPage({ params }: StudioPageProps) {
   const { id } = await params;
-  const studio = getStudioById(id);
+  const studio = await getStudioById(id);
 
   if (!studio) {
     notFound();
   }
 
   const category = getCategoryBySlug(studio.categorySlug);
-  const similarStudios = getSimilarStudios(studio);
+  const similarStudios = await getSimilarStudios(studio);
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] py-10 md:py-14">
