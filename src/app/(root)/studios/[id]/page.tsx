@@ -7,6 +7,7 @@ import Image from "next/image";
 import BookingDialog from "@/components/booking/BookingDialog";
 import { extractStudio, parseStudioList } from "@/lib/studios";
 import type { Studio } from "@/lib/types";
+import { CURRENT_USER } from "@/lib/user";
 
 type StudioPageProps = {
   params: Promise<{ id: string }>;
@@ -17,35 +18,23 @@ async function getStudioData(id: string): Promise<Studio | null> {
   if (!baseUrl) return null;
 
   try {
-    const res = await fetch(`${baseUrl}/studio/${id}`, {
-      cache: "no-store",
-    });
-
+    const res = await fetch(`${baseUrl}/studio/${id}`, { cache: "no-store" });
     if (res.ok) {
       const studio = extractStudio(await res.json());
       if (studio) return studio;
     }
-  } catch {
-    // Fall back to the collection endpoint below.
-  }
+  } catch { }
 
   try {
-    const listRes = await fetch(`${baseUrl}/studio`, {
-      cache: "no-store",
-    });
-
+    const listRes = await fetch(`${baseUrl}/studio`, { cache: "no-store" });
     if (listRes.ok) {
       const dataList = parseStudioList(await listRes.json());
       const found = dataList.find(
-        (studio) =>
-          (studio._id || studio.id) === id || String(studio._id) === String(id)
+        (studio) => (studio._id || studio.id) === id || String(studio._id) === String(id)
       );
-
       if (found) return found;
     }
-  } catch {
-    // No studio could be loaded.
-  }
+  } catch { }
 
   return null;
 }
@@ -55,34 +44,22 @@ async function getSimilarStudios(currentId: string): Promise<Studio[]> {
   if (!baseUrl) return [];
 
   try {
-    const res = await fetch(`${baseUrl}/studio`, {
-      cache: "no-store",
-    });
-
+    const res = await fetch(`${baseUrl}/studio`, { cache: "no-store" });
     if (res.ok) {
       return parseStudioList(await res.json())
         .filter((studio) => (studio._id || studio.id) !== currentId)
         .slice(0, 3);
     }
-  } catch {
-    // Render the page without similar studios.
-  }
+  } catch { }
 
   return [];
 }
 
-// ৩. ডাইনামিক মেটাডাটা
-export async function generateMetadata({
-  params,
-}: StudioPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: StudioPageProps): Promise<Metadata> {
   try {
     const { id } = await params;
     const studio = await getStudioData(id);
-
-    if (!studio) {
-      return { title: "Studio Details | Creativo" };
-    }
-
+    if (!studio) return { title: "Studio Details | Creativo" };
     return {
       title: `${studio.title || "Studio Details"} | Creativo`,
       description: studio.overview || studio.description || "Studio details in Creativo.",
@@ -92,7 +69,6 @@ export async function generateMetadata({
   }
 }
 
-// ৪. মেইন পেজ
 export default function StudioDetailPage({ params }: StudioPageProps) {
   return (
     <main className="min-h-screen bg-gray-50 text-gray-900 transition-colors duration-200 dark:bg-[#0a0a0a] dark:text-white py-10 md:py-14">
@@ -113,14 +89,11 @@ export default function StudioDetailPage({ params }: StudioPageProps) {
   );
 }
 
-// ৫. ডাটা ফেচিং এবং UI রেন্ডারিং
 async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }> }) {
   const { id } = await idPromise;
   const studio = await getStudioData(id);
 
-  if (!studio) {
-    notFound();
-  }
+  if (!studio) notFound();
 
   const similarStudios = await getSimilarStudios(studio._id || studio.id || id);
 
@@ -138,8 +111,8 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
   const amenities: string[] = Array.isArray(studio.amenities)
     ? studio.amenities
     : typeof studio.amenities === "string" && studio.amenities.trim()
-    ? studio.amenities.split(",").map((s: string) => s.trim())
-    : [
+      ? studio.amenities.split(",").map((s: string) => s.trim())
+      : [
         "High-Speed Fiber Wi-Fi",
         "Air Conditioning & Climate Control",
         "Hair & Makeup Styling Station",
@@ -148,9 +121,7 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
 
   return (
     <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px]">
-      {/* বাম পাশের মূল কন্টেন্ট */}
       <div className="min-w-0">
-        {/* কভার ছবি */}
         <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-gray-200 bg-slate-900 dark:border-white/5">
           <Image
             src={imageUrl}
@@ -164,7 +135,6 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
           </div>
         </div>
 
-        {/* টাইটেল এবং তথ্য */}
         <div className="mt-8">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
             <div className="flex items-center gap-1 rounded-md bg-gray-100 px-2.5 py-1 text-sm text-gray-800 dark:bg-white/5 dark:text-gray-300">
@@ -200,7 +170,6 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
           </div>
         </div>
 
-        {/* অ্যামেনিটিজ */}
         {amenities.length > 0 && (
           <div className="mt-10 border-t border-gray-200 pt-8 dark:border-white/5">
             <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">Included Amenities & Gear</h2>
@@ -221,7 +190,6 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
         )}
       </div>
 
-      {/* ডান পাশের বুকিং কার্ড */}
       <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-24 dark:border-white/5 dark:bg-[#121212]">
         <div className="flex items-baseline gap-1">
           <span className="text-3xl font-bold text-gray-900 dark:text-white">{hourlyRate}</span>
@@ -260,12 +228,15 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
           </div>
         </dl>
 
+        {/* 👇 এখানে studioImage প্রপটি যোগ করা হয়েছে */}
         <BookingDialog
           studioId={String(studio._id || studio.id || id)}
           studioTitle={title}
+          studioImage={imageUrl}
           hourlyRate={Number(hourlyRate) || 0}
+          userEmail={CURRENT_USER.email}
         />
-        
+
         <p className="mt-3 text-center text-xs text-gray-500">
           No charge until your host confirms the reservation.
         </p>
@@ -278,7 +249,6 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
         </div>
       </aside>
 
-      {/* Similar Studios */}
       {similarStudios.length > 0 && (
         <div className="col-span-full mt-16 border-t border-gray-200 pt-14 dark:border-white/5">
           <div className="mb-8">
@@ -293,10 +263,12 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
                 className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all hover:border-violet-500/50 hover:shadow-lg dark:border-white/5 dark:bg-[#121212] dark:hover:border-violet-500/50"
               >
                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-900">
-                  <img
+                  <Image
                     src={similar.imageUrl || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04"}
                     alt={similar.title || "Studio Image"}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    fill // 👈 এই লাইনটি যোগ করো
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // 👈 এই লাইনটি যোগ করো
+                    className="object-cover transition-transform duration-500 group-hover:scale-105" // h-full w-full বাদ দেওয়া হয়েছে
                   />
                   <div className="absolute top-3 right-3 rounded-full border border-violet-500/30 bg-black/60 px-3 py-1 text-xs font-semibold text-violet-300 backdrop-blur-md">
                     {similar.category || "Studio"}
@@ -342,7 +314,6 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
   );
 }
 
-// ৬. লোডিং স্কেলেটন
 function StudioDetailsSkeleton() {
   return (
     <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px] animate-pulse">

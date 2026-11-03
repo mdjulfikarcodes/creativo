@@ -31,7 +31,9 @@ import {
 type BookingDialogProps = {
   studioId: string;
   studioTitle: string;
+  studioImage: string; // 👈 নতুন যোগ করা হয়েছে
   hourlyRate: number;
+  userEmail: string;
 };
 
 const inputClassName =
@@ -40,7 +42,9 @@ const inputClassName =
 export default function BookingDialog({
   studioId,
   studioTitle,
+  studioImage, // 👈 নতুন যোগ করা হয়েছে
   hourlyRate,
+  userEmail,
 }: BookingDialogProps) {
   const router = useRouter();
 
@@ -121,6 +125,9 @@ export default function BookingDialog({
         credentials: "include",
         body: JSON.stringify({
           studioId,
+          studioTitle,
+          studioImage, // 👈 ইমেজটি ডাটাবেসে পাঠানো হচ্ছে
+          userEmail,
           date,
           startTime,
           endTime,

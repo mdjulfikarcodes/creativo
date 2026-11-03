@@ -173,7 +173,12 @@ export default function MyBookingsView() {
       });
 
       setCancelTarget(null);
-      await fetchBookings();
+      
+      // 👇 লোকাল স্টেট থেকে কার্ডটি রিমুভ করা হচ্ছে (UI থেকে সাথে সাথে মুছে যাবে)
+      setBookings((prevBookings) => 
+        prevBookings.filter((b) => b.id !== booking.id)
+      );
+
     } catch (err) {
       const message =
         err instanceof Error

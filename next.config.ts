@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   experimental: {
     agentFeedback: true,
   },
@@ -20,16 +19,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "images.unsplash.com",
-        port: "",
-        pathname: "/**",
-      },
-      // ১. অ্যাভাটার ইমেজের জন্য এই অংশটুকু যোগ করা হলো
-      {
-        protocol: "https",
-        hostname: "i.pravatar.cc",
-        port: "",
-        pathname: "/**",
+        hostname: "**", // 👈 এটি যেকোনো https ইমেজ লোড করার অনুমতি দেবে
       },
     ],
   },

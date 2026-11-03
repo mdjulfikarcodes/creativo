@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import Image from "next/image";
 
 // --- Dummy Data (পরে API থেকে ফেচ করবে) ---
 const DUMMY_LISTINGS = [
@@ -90,10 +91,12 @@ export default function MyListingsPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
                         <div className="w-16 h-12 rounded-md overflow-hidden shrink-0 bg-slate-800">
-                          <img 
+                          <Image 
                             src={studio.image} 
                             alt={studio.title} 
                             className="w-full h-full object-cover opacity-90"
+                            width={64}
+                            height={48}
                           />
                         </div>
                         <div>
