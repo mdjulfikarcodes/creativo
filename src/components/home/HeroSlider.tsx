@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, EffectFade, Navigation, Pagination } from "swiper/modules";
-import type { Swiper as SwiperType } from "swiper";
 
 // Swiper স্টাইল ইমপোর্ট
 import "swiper/css";
@@ -50,8 +48,6 @@ const slidesData = [
 ];
 
 export default function HeroSlider() {
-  const swiperRef = useRef<SwiperType | null>(null);
-
   return (
     <div className="relative w-full h-[85vh] min-h-[600px] overflow-hidden bg-black">
       <Swiper
@@ -71,9 +67,6 @@ export default function HeroSlider() {
           prevEl: ".custom-prev",
         }}
         loop={true}
-        onBeforeInit={(swiper) => {
-          swiperRef.current = swiper;
-        }}
         className="w-full h-full"
       >
         {slidesData.map((slide) => (

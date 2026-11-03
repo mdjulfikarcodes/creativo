@@ -1,17 +1,9 @@
 "use client";
 
-import React from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+
 import Image from "next/image";
-import {
-  ShieldCheck,
-  Award,
-  Users2,
-  Sparkles,
-  ArrowRight,
-  Globe2,
-} from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
 
 export default function AboutPage() {
   const router = useRouter();

@@ -1,0 +1,416 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import {
+  AlertCircle,
+  CalendarDays,
+  CalendarX2,
+  Clock,
+  Loader2,
+  RefreshCw,
+  XCircle,
+} from "lucide-react";
+
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/toast";
+import {
+  fetchMyBookings,
+  formatBookingDate,
+  formatBookingTimeRange,
+  formatPrice,
+  getApiBaseUrl,
+  type Booking,
+  type BookingStatus,
+} from "@/lib/booking";
+
+const STATUS_STYLES: Record<BookingStatus, string> = {
+  Pending: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+  Confirmed: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  Cancelled: "border-rose-500/30 bg-rose-500/10 text-rose-300",
+};
+
+function StatusBadge({ status }: { status: BookingStatus }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {status}
+    </span>
+  );
+}
+
+function BookingsSkeleton() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div
+          key={index}
+          className="flex flex-col gap-5 rounded-2xl border border-white/5 bg-[#121212] p-5 sm:flex-row sm:items-center"
+        >
+          <Skeleton className="h-40 w-full rounded-xl bg-white/5 sm:h-28 sm:w-40" />
+          <div className="flex-1 space-y-3">
+            <Skeleton className="h-5 w-1/2 bg-white/5" />
+            <Skeleton className="h-4 w-2/3 bg-white/5" />
+            <Skeleton className="h-4 w-1/3 bg-white/5" />
+          </div>
+          <Skeleton className="h-10 w-28 bg-white/5" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function MyBookingsView() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  const fetchBookings = useCallback(async () => {
+    try {
+      const nextBookings = await fetchMyBookings();
+      setBookings(nextBookings);
+      setError(null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load your bookings.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const refreshBookings = () => {
+    setLoading(true);
+    setError(null);
+    void fetchBookings();
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+
+    fetchMyBookings(controller.signal)
+      .then((nextBookings) => {
+        if (!active) return;
+        setBookings(nextBookings);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setError(
+          err instanceof Error ? err.message : "Failed to load your bookings.",
+        );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, []);
+
+  const closeCancelDialog = () => {
+    if (cancelling) return;
+    setCancelTarget(null);
+    setCancelError(null);
+  };
+
+  async function handleCancelBooking() {
+    if (!cancelTarget) return;
+
+    const booking = cancelTarget;
+    setCancelling(true);
+    setCancelError(null);
+
+    try {
+      const baseUrl = getApiBaseUrl();
+      if (!baseUrl) {
+        throw new Error(
+          "Booking API is not configured. Set NEXT_PUBLIC_SERVER_BASE_URL in .env.local.",
+        );
+      }
+
+      const response = await fetch(
+        `${baseUrl}/booking/${encodeURIComponent(booking.id)}/cancel`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        },
+      );
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        const message =
+          typeof body?.message === "string"
+            ? body.message
+            : `Could not cancel this booking (${response.status}).`;
+        throw new Error(message);
+      }
+
+      toast.add({
+        type: "success",
+        title: "Booking cancelled",
+        description: `${booking.studioName} on ${formatBookingDate(booking.date)} has been cancelled.`,
+      });
+
+      setCancelTarget(null);
+      await fetchBookings();
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while cancelling this booking.";
+
+      setCancelError(message);
+      toast.add({
+        type: "error",
+        title: "Cancellation failed",
+        description: message,
+      });
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  const showSkeleton = loading && bookings.length === 0;
+
+  return (
+    <div className="mx-auto w-full max-w-5xl space-y-8 text-white">
+      <header className="flex flex-col gap-4 border-b border-white/5 pb-6 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
+              My Bookings
+            </h1>
+            {!loading && bookings.length > 0 && (
+              <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-300">
+                {bookings.length} {bookings.length === 1 ? "booking" : "bookings"}
+              </span>
+            )}
+          </div>
+          <p className="mt-2 text-sm text-gray-400 md:text-base">
+            Track your studio sessions, approval status, and total booking cost.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={refreshBookings}
+            disabled={loading}
+            className="h-10 border-white/10 bg-white/5 text-gray-200 hover:bg-white/10 hover:text-white"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+          <Link
+            href="/studios"
+            className={buttonVariants({
+              className:
+                "h-10 bg-violet-600 text-white hover:bg-violet-700 transition-colors",
+            })}
+          >
+            Explore Studios
+          </Link>
+        </div>
+      </header>
+
+      {error && !loading && (
+        <div className="flex flex-col gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-300 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <p className="text-sm">{error}</p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={refreshBookings}
+            className="h-9 border-rose-500/30 bg-transparent text-rose-200 hover:bg-rose-500/15 hover:text-white"
+          >
+            Try again
+          </Button>
+        </div>
+      )}
+
+      {showSkeleton && <BookingsSkeleton />}
+
+      {!showSkeleton && bookings.length > 0 && (
+        <div className="space-y-4">
+          {bookings.map((booking) => (
+            <article
+              key={booking.id}
+              className="group overflow-hidden rounded-2xl border border-white/5 bg-[#121212]/80 backdrop-blur-xl transition-all hover:border-violet-500/40 hover:shadow-[0_0_40px_-12px_rgba(139,92,246,0.35)]"
+            >
+              <div className="flex flex-col gap-5 p-4 sm:flex-row sm:items-center sm:p-5">
+                <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl border border-white/5 bg-white/5 sm:h-28 sm:w-40">
+                  <Image
+                    src={booking.image}
+                    alt={booking.studioName}
+                    fill
+                    unoptimized
+                    sizes="(max-width: 640px) 100vw, 160px"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                </div>
+
+                <div className="min-w-0 flex-1 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="truncate text-lg font-semibold text-white">
+                      {booking.studioName}
+                    </h2>
+                    <StatusBadge status={booking.status} />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-400">
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarDays className="h-4 w-4 text-violet-400" />
+                      {formatBookingDate(booking.date)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Clock className="h-4 w-4 text-violet-400" />
+                      {formatBookingTimeRange(booking)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 border-t border-white/5 pt-4 sm:flex-col sm:items-end sm:border-t-0 sm:border-l sm:pt-0 sm:pl-5">
+                  <div className="sm:text-right">
+                    <p className="text-[11px] font-medium tracking-wide text-gray-500 uppercase">
+                      Total Price
+                    </p>
+                    <p className="flex items-baseline gap-1 text-xl font-bold text-white sm:justify-end">
+                      {formatPrice(booking.totalPrice)}
+                      <span className="text-xs font-semibold text-violet-400">
+                        SAR
+                      </span>
+                    </p>
+                  </div>
+
+                  {booking.status === "Pending" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setCancelError(null);
+                        setCancelTarget(booking);
+                      }}
+                      className="h-9 border-white/10 bg-white/5 text-gray-200 hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {!showSkeleton && !error && bookings.length === 0 && (
+        <div className="rounded-2xl border border-white/5 bg-[#121212] p-12 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-violet-500/10 text-violet-400">
+            <CalendarX2 className="h-7 w-7" />
+          </div>
+          <h2 className="mt-4 text-xl font-bold text-white">No bookings yet</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-gray-400">
+            You have not booked any creative studio sessions yet. Find a space and
+            lock in your next production.
+          </p>
+          <Link
+            href="/studios"
+            className={buttonVariants({
+              className:
+                "mt-6 h-10 bg-violet-600 text-white hover:bg-violet-700 transition-colors",
+            })}
+          >
+            Explore Studios
+          </Link>
+        </div>
+      )}
+
+      <Dialog
+        open={cancelTarget !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) closeCancelDialog();
+        }}
+      >
+        <DialogContent className="border border-white/10 bg-[#121212] text-white ring-white/10 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-white">
+              Cancel this booking?
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-400">
+              {cancelTarget
+                ? `${cancelTarget.studioName} on ${formatBookingDate(cancelTarget.date)} (${formatBookingTimeRange(cancelTarget)}) will be released. This cannot be undone.`
+                : "This action cannot be undone."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {cancelError && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{cancelError}</p>
+            </div>
+          )}
+
+          <DialogFooter className="border-white/10 bg-transparent">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={cancelling}
+              onClick={closeCancelDialog}
+              className="h-10 border-white/10 bg-transparent text-gray-300 hover:bg-white/5 hover:text-white"
+            >
+              Keep booking
+            </Button>
+            <Button
+              type="button"
+              disabled={cancelling}
+              onClick={() => void handleCancelBooking()}
+              className="h-10 gap-2 bg-rose-600 text-white hover:bg-rose-700"
+            >
+              {cancelling ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4" />
+                  Cancel booking
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

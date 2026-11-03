@@ -5,17 +5,17 @@ import Link from "next/link";
 const quickLinks = [
   { name: "Home", href: "/" },
   { name: "Explore Studios", href: "/studios" },
-  { name: "How It Works", href: "/how-it-works" },
-  { name: "About Us", href: "/about" },
-  { name: "Host Your Space", href: "/host" },
+  { name: "How It Works", href: "/#how-it-works" },
+  { name: "About Us", href: "/#about" },
+  { name: "Host Your Space", href: "/dashboard/add-studio" },
 ];
 
 const categories = [
-  { name: "Photo Studios", href: "/studios?category=photo" },
-  { name: "Sound Stages", href: "/studios?category=sound-stages" },
-  { name: "Podcast Rooms", href: "/studios?category=podcast" },
-  { name: "Music Suites", href: "/studios?category=music" },
-  { name: "Art Workshops", href: "/studios?category=art" },
+  { name: "Photo Studios", href: "/studios" },
+  { name: "Sound Stages", href: "/studios" },
+  { name: "Podcast Rooms", href: "/studios" },
+  { name: "Music Suites", href: "/studios" },
+  { name: "Art Workshops", href: "/studios" },
 ];
 
 const socials = [
@@ -91,13 +91,13 @@ const socials = [
 
 export default function Footer() {
   return (
-    <footer className="w-full border-t border-white/5 bg-[#0a0a0a]">
+    <footer className="w-full border-t border-gray-200 bg-gray-50 text-gray-900 transition-colors duration-200 dark:border-white/5 dark:bg-[#0a0a0a] dark:text-white">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1.6fr]">
           {/* Brand */}
           <div>
             <Link href="/" className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#8b5cf6]">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#8b5cf6] shadow-md shadow-purple-500/20">
                 <svg
                   width="24"
                   height="24"
@@ -113,12 +113,12 @@ export default function Footer() {
                   <circle cx="12" cy="13" r="3" />
                 </svg>
               </span>
-              <span className="text-2xl font-bold tracking-tight text-white">
+              <span className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
                 Creativo<span className="text-[#8b5cf6]">.</span>
               </span>
             </Link>
 
-            <p className="mt-5 max-w-sm text-sm leading-relaxed text-gray-400">
+            <p className="mt-5 max-w-sm text-sm leading-relaxed text-gray-600 dark:text-gray-400">
               The premier studio rental marketplace connecting photographers,
               filmmakers, podcasters, and creators with certified,
               production-ready creative spaces across Riyadh.
@@ -132,7 +132,7 @@ export default function Footer() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label={social.name}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-gray-400 transition-colors hover:border-white/20 hover:text-white"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-600 transition-colors hover:border-gray-400 hover:text-gray-900 dark:border-white/10 dark:text-gray-400 dark:hover:border-white/20 dark:hover:text-white"
                 >
                   {social.icon}
                 </a>
@@ -142,7 +142,7 @@ export default function Footer() {
 
           {/* Quick Links */}
           <nav aria-label="Quick links">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white">
               Quick Links
             </h3>
             <ul className="mt-5 space-y-3">
@@ -150,7 +150,7 @@ export default function Footer() {
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-sm text-gray-400 transition-colors hover:text-white"
+                    className="text-sm text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                   >
                     {link.name}
                   </Link>
@@ -161,7 +161,7 @@ export default function Footer() {
 
           {/* Categories */}
           <nav aria-label="Studio categories">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white">
               Categories
             </h3>
             <ul className="mt-5 space-y-3">
@@ -169,7 +169,7 @@ export default function Footer() {
                 <li key={category.name}>
                   <Link
                     href={category.href}
-                    className="text-sm text-gray-400 transition-colors hover:text-white"
+                    className="text-sm text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                   >
                     {category.name}
                   </Link>
@@ -180,10 +180,10 @@ export default function Footer() {
 
           {/* Newsletter */}
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white">
               Production Dispatch
             </h3>
-            <p className="mt-5 text-sm leading-relaxed text-gray-400">
+            <p className="mt-5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
               Join 18,000+ creators receiving our weekly release of newly
               scouted lofts, acoustic stages, and daylight studios.
             </p>
@@ -200,7 +200,7 @@ export default function Footer() {
                 type="email"
                 required
                 placeholder="producer@agency.com"
-                className="w-full rounded-lg border border-white/10 bg-[#121212] px-4 py-2.5 text-sm text-white placeholder:text-gray-500 outline-none transition-colors focus:border-[#8b5cf6]"
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-[#8b5cf6] dark:border-white/10 dark:bg-[#121212] dark:text-white dark:placeholder:text-gray-500"
               />
               <button
                 type="submit"
@@ -213,7 +213,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-14 flex flex-col gap-4 border-t border-white/5 pt-8 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-14 flex flex-col gap-4 border-t border-gray-200 pt-8 sm:flex-row sm:items-center sm:justify-between dark:border-white/5">
           <p className="text-sm text-gray-500">
             © 2026 Creativo Technologies, Inc. All rights reserved.
           </p>
@@ -221,19 +221,19 @@ export default function Footer() {
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link
               href="/privacy"
-              className="text-sm text-gray-500 transition-colors hover:text-white"
+              className="text-sm text-gray-500 transition-colors hover:text-gray-900 dark:hover:text-white"
             >
               Privacy Policy
             </Link>
             <Link
               href="/terms"
-              className="text-sm text-gray-500 transition-colors hover:text-white"
+              className="text-sm text-gray-500 transition-colors hover:text-gray-900 dark:hover:text-white"
             >
               Terms of Service
             </Link>
             <Link
               href="/security"
-              className="text-sm text-gray-500 transition-colors hover:text-white"
+              className="text-sm text-gray-500 transition-colors hover:text-gray-900 dark:hover:text-white"
             >
               Security Guarantee
             </Link>

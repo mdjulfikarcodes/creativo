@@ -7,7 +7,7 @@ export default function StudioCategories() {
     <section
       id="categories"
       aria-labelledby="studio-categories-heading"
-      className="w-full bg-[#0a0a0a] py-20 md:py-28"
+      className="w-full bg-gray-50 text-gray-900 transition-colors duration-200 dark:bg-[#0a0a0a] dark:text-white py-20 md:py-28"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading

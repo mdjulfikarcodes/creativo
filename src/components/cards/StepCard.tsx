@@ -11,7 +11,7 @@ export default function StepCard({ step, className }: StepCardProps) {
   return (
     <article
       className={cn(
-        "group relative flex flex-col items-center rounded-2xl border border-white/5 bg-[#121212] px-7 py-9 text-center transition-all duration-300 hover:-translate-y-1 hover:border-white/10 hover:bg-[#151515]",
+        "group relative flex flex-col items-center rounded-2xl border border-gray-200 bg-white px-7 py-9 text-center transition-all duration-300 hover:-translate-y-1 hover:border-violet-500/50 hover:shadow-lg dark:border-white/5 dark:bg-[#121212] dark:hover:border-white/10 dark:hover:bg-[#151515]",
         className
       )}
     >
@@ -22,10 +22,10 @@ export default function StepCard({ step, className }: StepCardProps) {
         {step.number}
       </span>
 
-      <h3 className="relative mt-6 text-lg font-bold text-white">
+      <h3 className="relative mt-6 text-lg font-bold text-gray-900 dark:text-white">
         {step.title}
       </h3>
-      <p className="relative mt-3 text-sm leading-relaxed text-gray-400">
+      <p className="relative mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
         {step.description}
       </p>
     </article>

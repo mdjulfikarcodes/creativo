@@ -45,27 +45,6 @@ export const bookingSteps: Step[] = [
   },
 ];
 
-export const hostingSteps: Step[] = [
-  {
-    number: "01",
-    title: "Share Your Space",
-    description:
-      "Tell us about your studio's dimensions, power, acoustics, and the gear that is already on site.",
-  },
-  {
-    number: "02",
-    title: "Get Verified",
-    description:
-      "Our team audits your space for safety, load tolerances, and production readiness before it goes live.",
-  },
-  {
-    number: "03",
-    title: "Start Earning",
-    description:
-      "Publish your availability, approve booking requests, and get paid after every confirmed shoot.",
-  },
-];
-
 export const guarantees: Guarantee[] = [
   {
     title: "SAR 3.5M Liability Protection",

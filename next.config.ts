@@ -16,12 +16,18 @@ const nextConfig: NextConfig = {
     },
   },
   
-  // 👇 এই নতুন অংশটুকু যোগ করুন
   images: {
     remotePatterns: [
       {
         protocol: "https",
         hostname: "images.unsplash.com",
+        port: "",
+        pathname: "/**",
+      },
+      // ১. অ্যাভাটার ইমেজের জন্য এই অংশটুকু যোগ করা হলো
+      {
+        protocol: "https",
+        hostname: "i.pravatar.cc",
         port: "",
         pathname: "/**",
       },

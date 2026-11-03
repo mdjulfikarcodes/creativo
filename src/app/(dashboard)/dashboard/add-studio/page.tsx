@@ -1,9 +1,9 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { MapPin, DollarSign, Users, Image as ImageIcon, Check } from "lucide-react";
+import { MapPin, DollarSign, Users, Image as ImageIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "@/components/ui/toast";
 
 // --- Zod Schema for Validation ---
 const formSchema = z.object({
@@ -53,6 +54,8 @@ export default function AddStudioPage() {
     },
   });
 
+  const imageUrl = useWatch({ control: form.control, name: "imageUrl" });
+
   const AMENITIES = [
   "3-Wall Infinity Cyclorama", "Profoto Lighting Rig",
   "Acoustic Soundproofing NC-20", "Hair & Makeup Station",
@@ -63,28 +66,40 @@ export default function AddStudioPage() {
   "Ceramic Pottery Wheels", "Easels & Drying Racks",
 ];
 
-  // ফর্ম সাবমিট হ্যান্ডলার (এখানে তোমার Express API কল করবে)
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    window.alert("Studio Published! Your studio has been successfully listed.");
-    router.push("/my-listings");
-    const result = await fetch(`${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/studio`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(values),
-    });
+    try {
+      const result = await fetch(`${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/studio`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(values),
+      });
 
-    const data = await result.json();
-    console.log("Api Response:", data);
+      if (!result.ok) {
+        const data = await result.json().catch(() => null);
+        throw new Error(
+          typeof data?.message === "string"
+            ? data.message
+            : "Failed to publish studio."
+        );
+      }
 
-    
-    
+      toast.add({
+        type: "success",
+        title: "Studio published",
+        description: "Your studio listing has been created successfully.",
+      });
+      router.push("/dashboard/my-studio");
+    } catch (error) {
+      toast.add({
+        type: "error",
+        title: "Could not publish studio",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   }
-
-  
-
 
   return (
     <div className="min-h-screen bg-slate-950 py-12 px-4 text-slate-200">
@@ -237,7 +252,7 @@ export default function AddStudioPage() {
                       type="button"
                       onClick={() => form.setValue("imageUrl", img.url)}
                       className={`relative overflow-hidden rounded-lg border-2 transition-all ${
-                        form.watch("imageUrl") === img.url ? "border-violet-500 ring-2 ring-violet-500/20" : "border-slate-700 hover:border-slate-500"
+                        imageUrl === img.url ? "border-violet-500 ring-2 ring-violet-500/20" : "border-slate-700 hover:border-slate-500"
                       }`}
                     >
                       <img src={img.url} alt={img.label} className="w-full h-24 object-cover opacity-80 hover:opacity-100 transition-opacity" />

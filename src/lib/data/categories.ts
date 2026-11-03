@@ -53,10 +53,6 @@ export const studioCategories: StudioCategory[] = [
   },
 ];
 
-export function getCategoryBySlug(slug: string) {
-  return studioCategories.find((category) => category.slug === slug);
-}
-
 export function getCategoryHref(slug: string) {
   return `/studios?category=${encodeURIComponent(slug)}`;
 }

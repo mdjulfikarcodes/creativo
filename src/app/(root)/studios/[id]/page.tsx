@@ -1,34 +1,17 @@
-import React, { Suspense } from "react";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Check, MapPin, Star, Users, ShieldCheck } from "lucide-react";
 import Image from "next/image";
+import BookingDialog from "@/components/booking/BookingDialog";
+import { extractStudio, parseStudioList } from "@/lib/studios";
+import type { Studio } from "@/lib/types";
 
 type StudioPageProps = {
   params: Promise<{ id: string }>;
 };
 
-type Studio = {
-  _id?: string;
-  id?: string;
-  title?: string;
-  overview?: string;
-  description?: string;
-  imageUrl?: string;
-  category?: string;
-  rating?: string | number;
-  reviews?: string | number;
-  location?: string;
-  hourlyRate?: string | number;
-  securityDeposit?: string | number;
-  maxCapacity?: string | number;
-  amenities?: unknown;
-};
-
-// ---------------------------------------------------------
-// ১. ডাটা ফেচিং ফাংশনসমূহ
-// ---------------------------------------------------------
 async function getStudioData(id: string): Promise<Studio | null> {
   const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
   if (!baseUrl) return null;
@@ -39,32 +22,29 @@ async function getStudioData(id: string): Promise<Studio | null> {
     });
 
     if (res.ok) {
-      const data = await res.json();
-      const studio = Array.isArray(data) ? data[0] : (data.data || data.studio || data);
-      if (studio && (studio._id || studio.id || studio.title)) {
-        return studio;
-      }
+      const studio = extractStudio(await res.json());
+      if (studio) return studio;
     }
-  } catch (err) {
-    console.warn("Direct /studio/:id fetch failed:", err);
+  } catch {
+    // Fall back to the collection endpoint below.
   }
 
-  // Fallback: List fetch
   try {
     const listRes = await fetch(`${baseUrl}/studio`, {
       cache: "no-store",
     });
 
     if (listRes.ok) {
-      const listData = await listRes.json();
-      const dataList: Studio[] = Array.isArray(listData) ? listData : (listData.data || listData.studios || []);
+      const dataList = parseStudioList(await listRes.json());
       const found = dataList.find(
-        (s: Studio) => (s._id || s.id) === id || String(s._id) === String(id)
+        (studio) =>
+          (studio._id || studio.id) === id || String(studio._id) === String(id)
       );
+
       if (found) return found;
     }
-  } catch (err) {
-    console.warn("List fetch error:", err);
+  } catch {
+    // No studio could be loaded.
   }
 
   return null;
@@ -80,21 +60,21 @@ async function getSimilarStudios(currentId: string): Promise<Studio[]> {
     });
 
     if (res.ok) {
-      const data = await res.json();
-      const dataList: Studio[] = Array.isArray(data) ? data : (data.data || data.studios || []);
-      return dataList.filter((s: Studio) => (s._id || s.id) !== currentId).slice(0, 3);
+      return parseStudioList(await res.json())
+        .filter((studio) => (studio._id || studio.id) !== currentId)
+        .slice(0, 3);
     }
-  } catch (err) {
-    console.warn("Error fetching similar studios:", err);
+  } catch {
+    // Render the page without similar studios.
   }
 
   return [];
 }
 
-// ---------------------------------------------------------
-// ২. মেটাডাটা জেনারেট করা
-// ---------------------------------------------------------
-export async function generateMetadata({ params }: StudioPageProps): Promise<Metadata> {
+// ৩. ডাইনামিক মেটাডাটা
+export async function generateMetadata({
+  params,
+}: StudioPageProps): Promise<Metadata> {
   try {
     const { id } = await params;
     const studio = await getStudioData(id);
@@ -105,29 +85,26 @@ export async function generateMetadata({ params }: StudioPageProps): Promise<Met
 
     return {
       title: `${studio.title || "Studio Details"} | Creativo`,
-      description: studio.overview || "Studio details in Creativo.",
+      description: studio.overview || studio.description || "Studio details in Creativo.",
     };
   } catch {
     return { title: "Studio Details | Creativo" };
   }
 }
 
-// ---------------------------------------------------------
-// ৩. মেইন পেজ (এটি সিঙ্ক্রোনাস, কোনো এরর দেবে না)
-// ---------------------------------------------------------
+// ৪. মেইন পেজ
 export default function StudioDetailPage({ params }: StudioPageProps) {
   return (
-    <main className="min-h-screen bg-[#0a0a0a] py-10 md:py-14">
+    <main className="min-h-screen bg-gray-50 text-gray-900 transition-colors duration-200 dark:bg-[#0a0a0a] dark:text-white py-10 md:py-14">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Link
           href="/studios"
-          className="inline-flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-white"
+          className="inline-flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to all studios
         </Link>
 
-        {/* ৪. Suspense দিয়ে ডাটা ফেচিং কম্পোনেন্টকে ঘিরে দেওয়া হলো */}
         <Suspense fallback={<StudioDetailsSkeleton />}>
           <StudioDetails idPromise={params} />
         </Suspense>
@@ -136,9 +113,7 @@ export default function StudioDetailPage({ params }: StudioPageProps) {
   );
 }
 
-// ---------------------------------------------------------
-// ৫. আসল ডাটা ফেচিং এবং UI রেন্ডারিং (async কম্পোনেন্ট)
-// ---------------------------------------------------------
+// ৫. ডাটা ফেচিং এবং UI রেন্ডারিং
 async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }> }) {
   const { id } = await idPromise;
   const studio = await getStudioData(id);
@@ -176,7 +151,7 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
       {/* বাম পাশের মূল কন্টেন্ট */}
       <div className="min-w-0">
         {/* কভার ছবি */}
-        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-white/5 bg-slate-900">
+        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-gray-200 bg-slate-900 dark:border-white/5">
           <Image
             src={imageUrl}
             alt={title}
@@ -184,7 +159,7 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
             width={800}
             height={500}
           />
-          <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md text-violet-300 text-xs font-semibold px-3 py-1.5 rounded-full border border-violet-500/30">
+          <div className="absolute top-4 left-4 rounded-full border border-violet-500/30 bg-black/60 px-3 py-1.5 text-xs font-semibold text-violet-300 backdrop-blur-md">
             {category}
           </div>
         </div>
@@ -192,30 +167,30 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
         {/* টাইটেল এবং তথ্য */}
         <div className="mt-8">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-            <div className="flex items-center gap-1 text-sm text-gray-300 bg-white/5 px-2.5 py-1 rounded-md">
-              <Star className="w-3.5 h-3.5 text-violet-500 fill-violet-500" />
-              <span className="font-semibold text-white">{rating}</span>
-              <span className="text-gray-500 text-xs">({reviews} reviews)</span>
+            <div className="flex items-center gap-1 rounded-md bg-gray-100 px-2.5 py-1 text-sm text-gray-800 dark:bg-white/5 dark:text-gray-300">
+              <Star className="h-3.5 w-3.5 fill-violet-500 text-violet-500" />
+              <span className="font-semibold">{rating}</span>
+              <span className="text-xs text-gray-500">({reviews} reviews)</span>
             </div>
 
-            <div className="flex items-center gap-1.5 text-sm text-gray-400">
-              <MapPin className="w-4 h-4 text-violet-400" />
+            <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
+              <MapPin className="h-4 w-4 text-violet-500" />
               <span>{location}</span>
             </div>
 
-            <div className="flex items-center gap-1.5 text-sm text-gray-400">
-              <Users className="w-4 h-4 text-violet-400" />
+            <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
+              <Users className="h-4 w-4 text-violet-500" />
               <span>Up to {maxCapacity} people</span>
             </div>
           </div>
 
-          <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
             {title}
           </h1>
 
-          <div className="mt-6 border-t border-white/5 pt-6">
-            <h2 className="text-lg font-bold text-white mb-3">Space Overview</h2>
-            <p className="max-w-3xl text-base leading-relaxed text-gray-300 whitespace-pre-line">
+          <div className="mt-6 border-t border-gray-200 pt-6 dark:border-white/5">
+            <h2 className="mb-3 text-lg font-bold text-gray-900 dark:text-white">Space Overview</h2>
+            <p className="max-w-3xl text-base leading-relaxed text-gray-700 whitespace-pre-line dark:text-gray-300">
               {overview}
             </p>
             <p className="mt-4 max-w-3xl text-sm leading-relaxed text-gray-500">
@@ -227,15 +202,15 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
 
         {/* অ্যামেনিটিজ */}
         {amenities.length > 0 && (
-          <div className="mt-10 border-t border-white/5 pt-8">
-            <h2 className="text-lg font-bold text-white mb-4">Included Amenities & Gear</h2>
+          <div className="mt-10 border-t border-gray-200 pt-8 dark:border-white/5">
+            <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">Included Amenities & Gear</h2>
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {amenities.map((amenity: string, idx: number) => (
                 <li
                   key={idx}
-                  className="flex items-center gap-3 rounded-lg border border-white/5 bg-[#121212] px-4 py-3 text-sm text-gray-300"
+                  className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 dark:border-white/5 dark:bg-[#121212] dark:text-gray-300"
                 >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-400">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-500 dark:text-violet-400">
                     <Check className="h-3.5 w-3.5" />
                   </span>
                   {amenity}
@@ -247,58 +222,57 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
       </div>
 
       {/* ডান পাশের বুকিং কার্ড */}
-      <aside className="h-fit rounded-2xl border border-white/5 bg-[#121212] p-6 lg:sticky lg:top-24">
+      <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-24 dark:border-white/5 dark:bg-[#121212]">
         <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold text-white">{hourlyRate}</span>
-          <span className="text-xs font-semibold text-violet-400">SAR</span>
-          <span className="text-gray-400 text-sm font-normal">/hr</span>
+          <span className="text-3xl font-bold text-gray-900 dark:text-white">{hourlyRate}</span>
+          <span className="text-xs font-semibold text-violet-500 dark:text-violet-400">SAR</span>
+          <span className="text-sm font-normal text-gray-500">/hr</span>
         </div>
 
-        <dl className="mt-5 space-y-3 border-t border-white/5 pt-5 text-sm">
+        <dl className="mt-5 space-y-3 border-t border-gray-100 pt-5 text-sm dark:border-white/5">
           <div className="flex items-center justify-between gap-4">
-            <dt className="text-gray-400">Max Capacity</dt>
-            <dd className="text-white font-medium">Up to {maxCapacity} people</dd>
+            <dt className="text-gray-500 dark:text-gray-400">Max Capacity</dt>
+            <dd className="font-medium text-gray-900 dark:text-white">Up to {maxCapacity} people</dd>
           </div>
 
           <div className="flex items-center justify-between gap-4">
-            <dt className="text-gray-400">Minimum Booking</dt>
-            <dd className="text-white font-medium">2 hours</dd>
+            <dt className="text-gray-500 dark:text-gray-400">Minimum Booking</dt>
+            <dd className="font-medium text-gray-900 dark:text-white">2 hours</dd>
           </div>
 
           {Number(securityDeposit) > 0 && (
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-gray-400">Security Deposit</dt>
-              <dd className="text-white font-medium">{securityDeposit} SAR (refundable)</dd>
+              <dt className="text-gray-500 dark:text-gray-400">Security Deposit</dt>
+              <dd className="font-medium text-gray-900 dark:text-white">{securityDeposit} SAR (refundable)</dd>
             </div>
           )}
 
           <div className="flex items-center justify-between gap-4">
-            <dt className="text-gray-400">Location</dt>
-            <dd className="text-white font-medium truncate max-w-[170px] text-right" title={location}>
+            <dt className="text-gray-500 dark:text-gray-400">Location</dt>
+            <dd className="max-w-[170px] truncate text-right font-medium text-gray-900 dark:text-white" title={location}>
               {location}
             </dd>
           </div>
 
           <div className="flex items-center justify-between gap-4">
-            <dt className="text-gray-400">Host Response</dt>
-            <dd className="text-white font-medium">Within 1 hour</dd>
+            <dt className="text-gray-500 dark:text-gray-400">Host Response</dt>
+            <dd className="font-medium text-gray-900 dark:text-white">Within 1 hour</dd>
           </div>
         </dl>
 
-        <button
-          type="button"
-          className="mt-6 w-full rounded-lg bg-[#8b5cf6] px-4 py-3 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-[#7c3aed]"
-        >
-          Request Booking
-        </button>
+        <BookingDialog
+          studioId={String(studio._id || studio.id || id)}
+          studioTitle={title}
+          hourlyRate={Number(hourlyRate) || 0}
+        />
         
         <p className="mt-3 text-center text-xs text-gray-500">
           No charge until your host confirms the reservation.
         </p>
 
-        <div className="mt-6 flex items-start gap-3 rounded-lg border border-white/5 bg-[#0a0a0a] p-4">
-          <ShieldCheck className="h-5 w-5 shrink-0 text-violet-400 mt-0.5" />
-          <p className="text-xs leading-relaxed text-gray-400">
+        <div className="mt-6 flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-white/5 dark:bg-[#0a0a0a]">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-violet-500 dark:text-violet-400" />
+          <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
             Every Creativo booking includes comprehensive liability protection and 24/7 production support in Riyadh.
           </p>
         </div>
@@ -306,54 +280,54 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
 
       {/* Similar Studios */}
       {similarStudios.length > 0 && (
-        <div className="col-span-full mt-16 border-t border-white/5 pt-14">
+        <div className="col-span-full mt-16 border-t border-gray-200 pt-14 dark:border-white/5">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white tracking-tight">Similar Studios</h2>
-            <p className="text-gray-400 text-sm mt-1">More verified creative spaces that match this style.</p>
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Similar Studios</h2>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">More verified creative spaces that match this style.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {similarStudios.map((similar: Studio) => (
               <div
                 key={similar._id || similar.id}
-                className="group bg-[#121212] border border-white/5 rounded-2xl overflow-hidden hover:border-violet-500/50 transition-all flex flex-col"
+                className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all hover:border-violet-500/50 hover:shadow-lg dark:border-white/5 dark:bg-[#121212] dark:hover:border-violet-500/50"
               >
-                <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-800">
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-900">
                   <img
                     src={similar.imageUrl || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04"}
                     alt={similar.title || "Studio Image"}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-violet-300 text-xs font-semibold px-3 py-1 rounded-full border border-violet-500/30">
+                  <div className="absolute top-3 right-3 rounded-full border border-violet-500/30 bg-black/60 px-3 py-1 text-xs font-semibold text-violet-300 backdrop-blur-md">
                     {similar.category || "Studio"}
                   </div>
                 </div>
 
-                <div className="p-5 flex flex-col flex-grow">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-semibold text-white line-clamp-1">
+                <div className="flex flex-1 flex-col p-5">
+                  <div className="mb-2 flex items-start justify-between">
+                    <h3 className="line-clamp-1 text-lg font-semibold text-gray-900 transition-colors group-hover:text-violet-600 dark:text-white dark:group-hover:text-[#a78bfa]">
                       {similar.title || "Untitled Studio"}
                     </h3>
-                    <div className="flex items-center gap-1 text-sm text-gray-300 bg-white/5 px-2 py-1 rounded-md">
-                      <Star className="w-3.5 h-3.5 text-violet-500 fill-violet-500" />
+                    <div className="flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-sm text-gray-800 dark:bg-white/5 dark:text-gray-300">
+                      <Star className="h-3.5 w-3.5 fill-violet-500 text-violet-500" />
                       <span>{similar.rating || "4.5"}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-sm text-gray-400 mb-4">
-                    <MapPin className="w-4 h-4 text-gray-500" />
+                  <div className="mb-4 flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <MapPin className="h-4 w-4 text-violet-500" />
                     <span className="line-clamp-1">{similar.location || "Location not specified"}</span>
                   </div>
 
-                  <div className="mt-auto flex items-center justify-between pt-4 border-t border-white/5">
-                    <div className="text-white font-bold flex items-baseline gap-1">
+                  <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-4 dark:border-white/5">
+                    <div className="flex items-baseline gap-1 font-bold text-gray-900 dark:text-white">
                       <span>{similar.hourlyRate || "0"}</span>
-                      <span className="text-xs font-semibold text-violet-400">SAR</span>
-                      <span className="text-gray-400 text-sm font-normal">/hr</span>
+                      <span className="text-xs font-semibold text-violet-500 dark:text-violet-400">SAR</span>
+                      <span className="text-sm font-normal text-gray-500">/hr</span>
                     </div>
                     <Link
                       href={`/studios/${similar._id || similar.id}`}
-                      className="text-sm font-medium text-violet-400 hover:text-violet-300 transition-colors"
+                      className="text-sm font-medium text-violet-600 transition-colors hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
                     >
                       View Details →
                     </Link>
@@ -368,19 +342,17 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
   );
 }
 
-// ---------------------------------------------------------
-// ৬. লোডিং স্কেলেটন (Suspense Fallback)
-// ---------------------------------------------------------
+// ৬. লোডিং স্কেলেটন
 function StudioDetailsSkeleton() {
   return (
     <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px] animate-pulse">
       <div className="space-y-6">
-        <div className="aspect-[16/10] w-full rounded-2xl bg-slate-800" />
-        <div className="h-8 bg-slate-800 rounded w-3/4" />
-        <div className="h-4 bg-slate-800 rounded w-1/2" />
-        <div className="h-32 bg-slate-800 rounded w-full" />
+        <div className="aspect-[16/10] w-full rounded-2xl bg-gray-200 dark:bg-slate-800" />
+        <div className="h-8 w-3/4 rounded bg-gray-200 dark:bg-slate-800" />
+        <div className="h-4 w-1/2 rounded bg-gray-200 dark:bg-slate-800" />
+        <div className="h-32 w-full rounded bg-gray-200 dark:bg-slate-800" />
       </div>
-      <div className="h-96 bg-slate-800 rounded-2xl w-full" />
+      <div className="h-96 w-full rounded-2xl bg-gray-200 dark:bg-slate-800" />
     </div>
   );
 }
