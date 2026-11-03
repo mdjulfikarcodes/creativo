@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { Sun, Moon } from "lucide-react";
+import { signOut, useSession } from "@/lib/auth-client";
 
 const emptySubscribe = () => () => {};
 
@@ -19,9 +20,26 @@ export default function Navbar() {
     () => false
   );
 
-  const [isAuthenticated, setIsAuthenticated] = useState(true); 
+  const { data: session, isPending } = useSession();
+  const isAuthenticated = Boolean(session?.user);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const userName = session?.user?.name ?? "Account";
+  const userImage = session?.user?.image;
+  const userInitials = userName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
+  const handleSignOut = async () => {
+    setIsDropdownOpen(false);
+    await signOut();
+    router.push("/");
+    router.refresh();
+  };
 
   const currentHash = useSyncExternalStore(
     (onStoreChange) => {
@@ -176,23 +194,32 @@ export default function Navbar() {
           </button>
 
           {/* Authenticated State */}
-          {isAuthenticated ? (
+          {isPending ? (
+            <div className="h-9 w-9 animate-pulse rounded-full bg-gray-200 dark:bg-white/10" />
+          ) : isAuthenticated ? (
             <div className="relative">
               <button 
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-3 focus:outline-none"
               >
                 <div className="h-9 w-9 overflow-hidden rounded-full ring-2 ring-[#8b5cf6] ring-offset-2 ring-offset-white dark:ring-offset-[#0a0a0a]">
-                  <Image
-                    src="https://i.pravatar.cc/150?u=a042581f4e29026024d" 
-                    alt="User Avatar" 
-                    className="h-full w-full object-cover"
-                    width={36}
-                    height={36}
-                  />
+                  {/* 👇 এখানে ভুয়া লিংক চেক করা হয়েছে */}
+                  {userImage && !userImage.includes("jutipivoberuwep") ? (
+                    <Image
+                      src={userImage}
+                      alt={userName}
+                      className="h-full w-full object-cover"
+                      width={36}
+                      height={36}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-[#8b5cf6] text-xs font-semibold text-white">
+                      {userInitials || "U"}
+                    </div>
+                  )}
                 </div>
                 <span className="hidden text-sm font-medium text-gray-900 dark:text-white sm:block">
-                  Julfikar Rahman
+                  {userName}
                 </span>
                 <svg className={`h-4 w-4 text-gray-500 transition-transform dark:text-gray-400 ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -203,12 +230,12 @@ export default function Navbar() {
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-3 w-48 rounded-xl border border-gray-200 bg-white py-2 shadow-2xl dark:border-white/10 dark:bg-[#121212]">
                   <Link href="/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">Dashboard</Link>
-                  <Link href="/add-studio" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">Add New Studio</Link>
-                  <Link href="/my-listings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">My Studio Listings</Link>
-                  <Link href="/my-bookings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">My Bookings</Link>
+                  <Link href="/dashboard/add-studio" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">Add New Studio</Link>
+                  <Link href="/dashboard/my-studio" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">My Studio Listings</Link>
+                  <Link href="/dashboard/my-bookings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">My Bookings</Link>
                   <div className="my-1 border-t border-gray-200 dark:border-white/10"></div>
                   <button 
-                    onClick={() => setIsAuthenticated(false)}
+                    onClick={handleSignOut}
                     className="block w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-red-50 hover:text-red-600 dark:text-red-400 dark:hover:bg-white/5 dark:hover:text-red-300"
                   >
                     Logout
