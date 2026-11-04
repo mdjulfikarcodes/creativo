@@ -11,6 +11,7 @@ import {
   Loader2,
   RefreshCw,
   XCircle,
+  CheckCircle, // 👈 নতুন ইম্পোর্ট
 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
+import { useSession } from "@/lib/auth-client";
 import {
   fetchMyBookings,
   formatBookingDate,
@@ -35,9 +37,9 @@ import {
 } from "@/lib/booking";
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
-  Pending: "border-amber-500/30 bg-amber-500/10 text-amber-300",
-  Confirmed: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
-  Cancelled: "border-rose-500/30 bg-rose-500/10 text-rose-300",
+  Pending: "border-amber-500/30 bg-amber-500/10 text-amber-500 dark:text-amber-300",
+  Confirmed: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
+  Cancelled: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-300",
 };
 
 function StatusBadge({ status }: { status: BookingStatus }) {
@@ -57,15 +59,15 @@ function BookingsSkeleton() {
       {Array.from({ length: 3 }).map((_, index) => (
         <div
           key={index}
-          className="flex flex-col gap-5 rounded-2xl border border-white/5 bg-[#121212] p-5 sm:flex-row sm:items-center"
+          className="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/5 dark:bg-[#121212] sm:flex-row sm:items-center"
         >
-          <Skeleton className="h-40 w-full rounded-xl bg-white/5 sm:h-28 sm:w-40" />
+          <Skeleton className="h-40 w-full rounded-xl bg-gray-200 dark:bg-white/5 sm:h-28 sm:w-40" />
           <div className="flex-1 space-y-3">
-            <Skeleton className="h-5 w-1/2 bg-white/5" />
-            <Skeleton className="h-4 w-2/3 bg-white/5" />
-            <Skeleton className="h-4 w-1/3 bg-white/5" />
+            <Skeleton className="h-5 w-1/2 bg-gray-200 dark:bg-white/5" />
+            <Skeleton className="h-4 w-2/3 bg-gray-200 dark:bg-white/5" />
+            <Skeleton className="h-4 w-1/3 bg-gray-200 dark:bg-white/5" />
           </div>
-          <Skeleton className="h-10 w-28 bg-white/5" />
+          <Skeleton className="h-10 w-28 bg-gray-200 dark:bg-white/5" />
         </div>
       ))}
     </div>
@@ -73,17 +75,32 @@ function BookingsSkeleton() {
 }
 
 export default function MyBookingsView() {
+  const { data: session, isPending: sessionPending } = useSession();
+  const email = session?.user?.email ?? "";
+
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Cancel স্টেট
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
+  // 👇 Confirm স্টেট
+  const [confirmTarget, setConfirmTarget] = useState<Booking | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
   const fetchBookings = useCallback(async () => {
+    if (!email) {
+      setError("Please sign in to view your bookings.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const nextBookings = await fetchMyBookings();
+      const nextBookings = await fetchMyBookings(email);
       setBookings(nextBookings);
       setError(null);
     } catch (err) {
@@ -93,7 +110,7 @@ export default function MyBookingsView() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [email]);
 
   const refreshBookings = () => {
     setLoading(true);
@@ -102,17 +119,19 @@ export default function MyBookingsView() {
   };
 
   useEffect(() => {
+    if (sessionPending || !email) return;
+
     const controller = new AbortController();
     let active = true;
 
-    fetchMyBookings(controller.signal)
+    fetchMyBookings(email, controller.signal)
       .then((nextBookings) => {
         if (!active) return;
         setBookings(nextBookings);
         setError(null);
       })
       .catch((err: unknown) => {
-        if (!active) return;
+        if (!active || controller.signal.aborted) return;
         setError(
           err instanceof Error ? err.message : "Failed to load your bookings.",
         );
@@ -125,7 +144,71 @@ export default function MyBookingsView() {
       active = false;
       controller.abort();
     };
-  }, []);
+  }, [email, sessionPending]);
+
+  const closeConfirmDialog = () => {
+    if (confirming) return;
+    setConfirmTarget(null);
+    setConfirmError(null);
+  };
+
+  // 👇 Confirm হ্যান্ডলার
+  async function handleConfirmBooking() {
+    if (!confirmTarget) return;
+    setConfirming(true);
+    setConfirmError(null);
+
+    try {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(
+        `${baseUrl}/booking/${encodeURIComponent(confirmTarget.id)}/confirm`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        },
+      );
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        const message =
+          typeof body?.message === "string"
+            ? body.message
+            : `Could not confirm this booking (${response.status}).`;
+        throw new Error(message);
+      }
+
+      toast.add({
+        type: "success",
+        title: "Booking Confirmed",
+        description: `${confirmTarget.studioName} is now confirmed.`,
+      });
+
+      const confirmedId = confirmTarget.id;
+      setConfirmTarget(null);
+      setConfirmError(null);
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === confirmedId ? { ...b, status: "Confirmed" } : b,
+        ),
+      );
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while confirming this booking.";
+
+      setConfirmError(message);
+      toast.add({
+        type: "error",
+        title: "Confirmation failed",
+        description: message,
+      });
+    } finally {
+      setConfirming(false);
+    }
+  }
 
   const closeCancelDialog = () => {
     if (cancelling) return;
@@ -135,24 +218,18 @@ export default function MyBookingsView() {
 
   async function handleCancelBooking() {
     if (!cancelTarget) return;
-
     const booking = cancelTarget;
     setCancelling(true);
     setCancelError(null);
 
     try {
       const baseUrl = getApiBaseUrl();
-      if (!baseUrl) {
-        throw new Error(
-          "Booking API is not configured. Set NEXT_PUBLIC_SERVER_BASE_URL in .env.local.",
-        );
-      }
-
       const response = await fetch(
         `${baseUrl}/booking/${encodeURIComponent(booking.id)}/cancel`,
         {
           method: "PATCH",
           credentials: "include",
+          cache: "no-store",
           headers: { Accept: "application/json" },
         },
       );
@@ -173,12 +250,11 @@ export default function MyBookingsView() {
       });
 
       setCancelTarget(null);
-      
-      // 👇 লোকাল স্টেট থেকে কার্ডটি রিমুভ করা হচ্ছে (UI থেকে সাথে সাথে মুছে যাবে)
-      setBookings((prevBookings) => 
-        prevBookings.filter((b) => b.id !== booking.id)
+      setBookings((prevBookings) =>
+        prevBookings.map((b) =>
+          b.id === booking.id ? { ...b, status: "Cancelled" } : b,
+        ),
       );
-
     } catch (err) {
       const message =
         err instanceof Error
@@ -196,23 +272,27 @@ export default function MyBookingsView() {
     }
   }
 
-  const showSkeleton = loading && bookings.length === 0;
+  const signInError =
+    !sessionPending && !email ? "Please sign in to view your bookings." : null;
+  const displayError = error ?? signInError;
+  const showSkeleton =
+    (sessionPending || (loading && Boolean(email))) && bookings.length === 0;
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-8 text-white">
-      <header className="flex flex-col gap-4 border-b border-white/5 pb-6 md:flex-row md:items-end md:justify-between">
+    <div className="mx-auto w-full max-w-5xl space-y-8 text-gray-900 dark:text-white">
+      <header className="flex flex-col gap-4 border-b border-gray-200 pb-6 dark:border-white/5 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
+            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
               My Bookings
             </h1>
             {!loading && bookings.length > 0 && (
-              <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-300">
+              <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-300">
                 {bookings.length} {bookings.length === 1 ? "booking" : "bookings"}
               </span>
             )}
           </div>
-          <p className="mt-2 text-sm text-gray-400 md:text-base">
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 md:text-base">
             Track your studio sessions, approval status, and total booking cost.
           </p>
         </div>
@@ -223,18 +303,15 @@ export default function MyBookingsView() {
             variant="outline"
             onClick={refreshBookings}
             disabled={loading}
-            className="h-10 border-white/10 bg-white/5 text-gray-200 hover:bg-white/10 hover:text-white"
+            className="h-10 border-gray-200 bg-white text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
           >
-            <RefreshCw
-              className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-            />
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
           <Link
             href="/studios"
             className={buttonVariants({
-              className:
-                "h-10 bg-violet-600 text-white hover:bg-violet-700 transition-colors",
+              className: "h-10 bg-violet-600 text-white hover:bg-violet-700 transition-colors",
             })}
           >
             Explore Studios
@@ -242,20 +319,22 @@ export default function MyBookingsView() {
         </div>
       </header>
 
-      {error && !loading && (
-        <div className="flex flex-col gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-300 sm:flex-row sm:items-center sm:justify-between">
+      {displayError && !showSkeleton && (
+        <div className="flex flex-col gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-600 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <AlertCircle className="h-5 w-5 shrink-0" />
-            <p className="text-sm">{error}</p>
+            <p className="text-sm">{displayError}</p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={refreshBookings}
-            className="h-9 border-rose-500/30 bg-transparent text-rose-200 hover:bg-rose-500/15 hover:text-white"
-          >
-            Try again
-          </Button>
+          {email && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={refreshBookings}
+              className="h-9 border-rose-500/30 bg-transparent text-rose-600 hover:bg-rose-500/15 dark:text-rose-200 dark:hover:text-white"
+            >
+              Try again
+            </Button>
+          )}
         </div>
       )}
 
@@ -266,10 +345,10 @@ export default function MyBookingsView() {
           {bookings.map((booking) => (
             <article
               key={booking.id}
-              className="group overflow-hidden rounded-2xl border border-white/5 bg-[#121212]/80 backdrop-blur-xl transition-all hover:border-violet-500/40 hover:shadow-[0_0_40px_-12px_rgba(139,92,246,0.35)]"
+              className="group overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all hover:border-violet-500/40 hover:shadow-lg dark:border-white/5 dark:bg-[#121212]/80 dark:backdrop-blur-xl dark:hover:shadow-[0_0_40px_-12px_rgba(139,92,246,0.35)]"
             >
               <div className="flex flex-col gap-5 p-4 sm:flex-row sm:items-center sm:p-5">
-                <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl border border-white/5 bg-white/5 sm:h-28 sm:w-40">
+                <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-white/5 dark:bg-white/5 sm:h-28 sm:w-40">
                   <Image
                     src={booking.image}
                     alt={booking.studioName}
@@ -282,51 +361,64 @@ export default function MyBookingsView() {
 
                 <div className="min-w-0 flex-1 space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="truncate text-lg font-semibold text-white">
+                    <h2 className="truncate text-lg font-semibold text-gray-900 dark:text-white">
                       {booking.studioName}
                     </h2>
                     <StatusBadge status={booking.status} />
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-400">
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
                     <span className="inline-flex items-center gap-1.5">
-                      <CalendarDays className="h-4 w-4 text-violet-400" />
+                      <CalendarDays className="h-4 w-4 text-violet-500 dark:text-violet-400" />
                       {formatBookingDate(booking.date)}
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                      <Clock className="h-4 w-4 text-violet-400" />
+                      <Clock className="h-4 w-4 text-violet-500 dark:text-violet-400" />
                       {formatBookingTimeRange(booking)}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-4 border-t border-white/5 pt-4 sm:flex-col sm:items-end sm:border-t-0 sm:border-l sm:pt-0 sm:pl-5">
+                <div className="flex flex-col items-start gap-4 border-t border-gray-200 pt-4 dark:border-white/5 sm:items-end sm:border-t-0 sm:border-l sm:pt-0 sm:pl-5">
                   <div className="sm:text-right">
                     <p className="text-[11px] font-medium tracking-wide text-gray-500 uppercase">
                       Total Price
                     </p>
-                    <p className="flex items-baseline gap-1 text-xl font-bold text-white sm:justify-end">
+                    <p className="flex items-baseline gap-1 text-xl font-bold text-gray-900 dark:text-white sm:justify-end">
                       {formatPrice(booking.totalPrice)}
-                      <span className="text-xs font-semibold text-violet-400">
+                      <span className="text-xs font-semibold text-violet-500 dark:text-violet-400">
                         SAR
                       </span>
                     </p>
                   </div>
 
+                  {/* 👇 Confirm এবং Cancel বাটন */}
                   {booking.status === "Pending" && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setCancelError(null);
-                        setCancelTarget(booking);
-                      }}
-                      className="h-9 border-white/10 bg-white/5 text-gray-200 hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300"
-                    >
-                      <XCircle className="h-4 w-4" />
-                      Cancel
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => setConfirmTarget(booking)}
+                        className="h-9 bg-emerald-600 text-white hover:bg-emerald-700"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1.5" />
+                        Confirm
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCancelError(null);
+                          setCancelTarget(booking);
+                        }}
+                        className="h-9 border-gray-200 bg-white text-gray-700 hover:border-rose-500/40 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+                      >
+                        <XCircle className="h-4 w-4 mr-1.5" />
+                        Cancel
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -335,21 +427,20 @@ export default function MyBookingsView() {
         </div>
       )}
 
-      {!showSkeleton && !error && bookings.length === 0 && (
-        <div className="rounded-2xl border border-white/5 bg-[#121212] p-12 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-violet-500/10 text-violet-400">
+      {!showSkeleton && !displayError && bookings.length === 0 && (
+        <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center dark:border-white/5 dark:bg-[#121212]">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400">
             <CalendarX2 className="h-7 w-7" />
           </div>
-          <h2 className="mt-4 text-xl font-bold text-white">No bookings yet</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-gray-400">
+          <h2 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">No bookings yet</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-gray-500 dark:text-gray-400">
             You have not booked any creative studio sessions yet. Find a space and
             lock in your next production.
           </p>
           <Link
             href="/studios"
             className={buttonVariants({
-              className:
-                "mt-6 h-10 bg-violet-600 text-white hover:bg-violet-700 transition-colors",
+              className: "mt-6 h-10 bg-violet-600 text-white hover:bg-violet-700 transition-colors",
             })}
           >
             Explore Studios
@@ -357,18 +448,17 @@ export default function MyBookingsView() {
         </div>
       )}
 
+      {/* Cancel Dialog */}
       <Dialog
         open={cancelTarget !== null}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) closeCancelDialog();
         }}
       >
-        <DialogContent className="border border-white/10 bg-[#121212] text-white ring-white/10 sm:max-w-md">
+        <DialogContent className="border border-gray-200 bg-white text-gray-900 dark:border-white/10 dark:bg-[#121212] dark:text-white sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-white">
-              Cancel this booking?
-            </DialogTitle>
-            <DialogDescription className="text-sm text-gray-400">
+            <DialogTitle className="text-lg font-semibold">Cancel this booking?</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500 dark:text-gray-400">
               {cancelTarget
                 ? `${cancelTarget.studioName} on ${formatBookingDate(cancelTarget.date)} (${formatBookingTimeRange(cancelTarget)}) will be released. This cannot be undone.`
                 : "This action cannot be undone."}
@@ -376,22 +466,19 @@ export default function MyBookingsView() {
           </DialogHeader>
 
           {cancelError && (
-            <div
-              role="alert"
-              className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300"
-            >
+            <div className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-600 dark:text-rose-300">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>{cancelError}</p>
             </div>
           )}
 
-          <DialogFooter className="border-white/10 bg-transparent">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
               disabled={cancelling}
               onClick={closeCancelDialog}
-              className="h-10 border-white/10 bg-transparent text-gray-300 hover:bg-white/5 hover:text-white"
+              className="h-10 border-gray-200 bg-transparent text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
             >
               Keep booking
             </Button>
@@ -410,6 +497,62 @@ export default function MyBookingsView() {
                 <>
                   <XCircle className="h-4 w-4" />
                   Cancel booking
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 👇 Confirm Dialog */}
+      <Dialog
+        open={confirmTarget !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) closeConfirmDialog();
+        }}
+      >
+        <DialogContent className="border border-gray-200 bg-white text-gray-900 dark:border-white/10 dark:bg-[#121212] dark:text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Confirm this booking?</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500 dark:text-gray-400">
+              {confirmTarget
+                ? `Are you sure you want to confirm the booking for ${confirmTarget.studioName}?`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          {confirmError && (
+            <div className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-600 dark:text-rose-300">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{confirmError}</p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={confirming}
+              onClick={closeConfirmDialog}
+              className="h-10 border-gray-200 bg-transparent text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={confirming}
+              onClick={() => void handleConfirmBooking()}
+              className="h-10 gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              {confirming ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Confirming...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  Confirm Booking
                 </>
               )}
             </Button>

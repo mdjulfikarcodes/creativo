@@ -112,7 +112,11 @@ function normalizeBooking(raw: unknown): Booking | null {
       "Studio Booking",
     image:
       asString(
-        studio.imageUrl ?? studio.image ?? raw.imageUrl ?? raw.image,
+        studio.imageUrl ??
+          studio.image ??
+          raw.studioImage ??
+          raw.imageUrl ??
+          raw.image,
       ) || FALLBACK_STUDIO_IMAGE,
     date: asString(raw.date ?? raw.bookingDate ?? raw.startDate),
     startTime,
@@ -204,7 +208,10 @@ export function calculateHours(startTime: string, endTime: string): number {
  * Loads the signed-in user's bookings. Kept side-effect free (no React state)
  * so it can be called from effects without triggering cascading renders.
  */
-export async function fetchMyBookings(signal?: AbortSignal): Promise<Booking[]> {
+export async function fetchMyBookings(
+  userEmail: string,
+  signal?: AbortSignal,
+): Promise<Booking[]> {
   const baseUrl = getApiBaseUrl();
   if (!baseUrl) {
     throw new Error(
@@ -212,13 +219,20 @@ export async function fetchMyBookings(signal?: AbortSignal): Promise<Booking[]> 
     );
   }
 
-  const response = await fetch(`${baseUrl}/booking/my-bookings`, {
-    method: "GET",
-    credentials: "include",
-    cache: "no-store",
-    headers: { Accept: "application/json" },
-    signal,
-  });
+  if (!userEmail) {
+    throw new Error("Please sign in to view your bookings.");
+  }
+
+  const response = await fetch(
+    `${baseUrl}/booking/my-bookings?userEmail=${encodeURIComponent(userEmail)}`,
+    {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal,
+    },
+  );
 
   if (response.status === 401 || response.status === 403) {
     throw new Error("Please sign in to view your bookings.");

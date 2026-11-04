@@ -1,7 +1,22 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MapPin, Star, PlusCircle, ExternalLink, Edit, Trash2 } from "lucide-react";
+import Image from "next/image";
+import { useTheme } from "next-themes";
+import {
+  AlertCircle,
+  Building2,
+  Edit,
+  ExternalLink,
+  Loader2,
+  MapPin,
+  PlusCircle,
+  RefreshCw,
+  Star,
+  Trash2,
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,182 +25,472 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import Image from "next/image";
+import { toast } from "@/components/ui/toast";
+import { useSession } from "@/lib/auth-client";
+import { deleteStudio, getMyStudios } from "@/lib/studios";
+import type { Studio } from "@/lib/types";
 
-// --- Dummy Data (পরে API থেকে ফেচ করবে) ---
-const DUMMY_LISTINGS = [
-  {
-    id: "1",
-    title: "Lumina Grand Cyclorama Stage",
-    image: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=200&auto=format&fit=crop",
-    location: "Soho Design District, New York, NY",
-    category: "Photo Studios",
-    rate: 145,
-    capacity: 25,
-    rating: 4.96,
-  },
-  {
-    id: "2",
-    title: "The Greenhouse Daylight Photo Pavilion",
-    image: "https://images.unsplash.com/photo-1593697821252-0c9137d9fc45?q=80&w=200&auto=format&fit=crop",
-    location: "Greenpoint Waterfront, Brooklyn, NY",
-    category: "Photo Studios",
-    rate: 130,
-    capacity: 15,
-    rating: 4.89,
-  },
-];
+const FALLBACK_STUDIO_IMAGE =
+  "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=200&auto=format&fit=crop";
 
-export default function MyListingsPage() {
-  const handleDelete = () => {
-    // Deletion will be wired to the API once the listing endpoint is available.
+function studioId(studio: Studio): string {
+  return String(studio._id || studio.id || "");
+}
+
+function studioImage(studio: Studio): string {
+  return studio.imageUrl || studio.image || FALLBACK_STUDIO_IMAGE;
+}
+
+function studioRate(studio: Studio): string {
+  const rate = studio.hourlyRate ?? studio.price;
+  return rate === undefined || rate === null || rate === "" ? "—" : String(rate);
+}
+
+function studioCapacity(studio: Studio): string {
+  const capacity = studio.maxCapacity ?? studio.capacity;
+  return capacity === undefined || capacity === null || capacity === ""
+    ? "—"
+    : String(capacity);
+}
+
+function studioRating(studio: Studio): string {
+  const rating = Number(studio.rating);
+  return Number.isFinite(rating) && rating > 0 ? rating.toFixed(1) : "New";
+}
+
+export default function MyStudioListings() {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
+  const { data: session, isPending: sessionPending } = useSession();
+  const email = session?.user?.email ?? "";
+
+  const [studios, setStudios] = useState<Studio[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const [deleteTarget, setDeleteTarget] = useState<Studio | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (sessionPending || !email) return;
+
+    const controller = new AbortController();
+    let active = true;
+
+    getMyStudios(email, controller.signal)
+      .then((nextStudios) => {
+        if (!active) return;
+        setStudios(nextStudios);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (!active || controller.signal.aborted) return;
+        setError(
+          err instanceof Error ? err.message : "Failed to load your studios.",
+        );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [email, sessionPending, reloadKey]);
+
+  const refresh = () => {
+    setError(null);
+    setLoading(true);
+    setReloadKey((key) => key + 1);
   };
 
+  const closeDeleteDialog = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteError(null);
+  };
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+
+    const id = studioId(deleteTarget);
+    const title = deleteTarget.title || "this studio";
+
+    if (!id) {
+      setDeleteError("This studio is missing an id and cannot be deleted.");
+      return;
+    }
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteStudio(id);
+
+      toast.add({
+        type: "success",
+        title: "Studio deleted",
+        description: `${title} has been permanently removed.`,
+      });
+
+      setStudios((prev) => prev.filter((studio) => studioId(studio) !== id));
+      setDeleteTarget(null);
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while deleting this studio.";
+
+      setDeleteError(message);
+      toast.add({
+        type: "error",
+        title: "Delete failed",
+        description: message,
+      });
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  const signInError =
+    !sessionPending && !email
+      ? "Please sign in to manage your studios."
+      : null;
+  const displayError = error ?? signInError;
+  const showSkeleton =
+    (sessionPending || (loading && Boolean(email))) && studios.length === 0;
+  const showEmpty = !showSkeleton && !displayError && studios.length === 0;
+
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0a0a0a] py-12 px-4 text-gray-900 dark:text-white">
+    <div
+      className={`min-h-screen py-12 px-4 ${isDark ? "bg-[#0a0a0a] text-white" : "bg-gray-50 text-gray-900"}`}
+    >
       <div className="max-w-6xl mx-auto space-y-8">
-        
         {/* হেডার সেকশন */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800 pb-6">
+        <div
+          className={`flex flex-col md:flex-row md:items-end justify-between gap-4 border-b pb-6 ${isDark ? "border-white/5" : "border-gray-200"}`}
+        >
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
+            <h1
+              className={`text-3xl md:text-4xl font-bold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}
+            >
               My Studio Listings
             </h1>
-            <p className="text-gray-400 dark:text-gray-400 mt-2 text-sm md:text-base">
-              Manage your listed production spaces, update hourly rates, and review listings.
+            <p
+              className={`mt-2 text-sm md:text-base ${isDark ? "text-gray-400" : "text-gray-500"}`}
+            >
+              Manage your listed production spaces, update hourly rates, and
+              review listings.
             </p>
           </div>
-          <Link href="/add-studio">
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white">
-              <PlusCircle className="w-4 h-4 mr-2" />
-              Add New Studio
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={refresh}
+              disabled={loading || !email}
+              className={`${
+                isDark
+                  ? "border-white/10 bg-white/5 text-gray-200 hover:bg-white/10"
+                  : "border-gray-200 bg-white text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              <RefreshCw
+                className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh
             </Button>
-          </Link>
-        </div>
-
-        {/* টেবিল সেকশন */}
-        <div className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/5 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              
-              {/* টেবিল হেডার */}
-              <thead className="bg-white dark:bg-[#0a0a0a] border-b border-gray-200 dark:border-white/5 text-xs uppercase text-gray-400 dark:text-gray-400 font-semibold tracking-wider">
-                <tr>
-                  <th className="px-6 py-4">Studio Space</th>
-                  <th className="px-6 py-4">Category</th>
-                  <th className="px-6 py-4">Hourly Rate</th>
-                  <th className="px-6 py-4">Capacity</th>
-                  <th className="px-6 py-4">Rating</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              
-              {/* টেবিল বডি */}
-              <tbody className="divide-y divide-slate-800/50">
-                {DUMMY_LISTINGS.map((studio) => (
-                  <tr key={studio.id} className="hover:bg-slate-800/20 transition-colors">
-                    
-                    {/* Studio Space (Image + Title) */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-12 rounded-md overflow-hidden shrink-0 bg-slate-800">
-                          <Image 
-                            src={studio.image} 
-                            alt={studio.title} 
-                            className="w-full h-full object-cover opacity-90"
-                            width={64}
-                            height={48}
-                          />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 dark:text-white text-sm">{studio.title}</p>
-                          <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
-                            <MapPin className="w-3 h-3" />
-                            {studio.location}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Category */}
-                    <td className="px-6 py-4">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-violet-950/40 text-violet-400 border border-violet-900/50 whitespace-nowrap">
-                        {studio.category}
-                      </span>
-                    </td>
-
-                    {/* Hourly Rate */}
-                    <td className="px-6 py-4">
-                      <span className="font-bold text-gray-900 dark:text-white">${studio.rate}</span>
-                      <span className="text-xs text-slate-400">/hr</span>
-                    </td>
-
-                    {/* Capacity */}
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-slate-300">{studio.capacity} people</span>
-                    </td>
-
-                    {/* Rating */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1 text-sm text-slate-300">
-                        <Star className="w-4 h-4 text-violet-500 fill-violet-500" />
-                        <span>{studio.rating}</span>
-                      </div>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white">
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
-                        
-                        <Link href={`/studios/edit/${studio.id}`}>
-                          <Button variant="outline" size="sm" className="h-8 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
-                            <Edit className="w-3.5 h-3.5 mr-1.5" />
-                            Update
-                          </Button>
-                        </Link>
-
-                        {/* Delete Confirmation Modal */}
-                        <Dialog>
-                          <DialogTrigger
-                            render={
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-400 hover:bg-red-950/30">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            }
-                          />
-                          <DialogContent className="bg-slate-900 border-slate-800 text-slate-200">
-                            <DialogHeader>
-                              <DialogTitle>Are you absolutely sure?</DialogTitle>
-                              <DialogDescription className="text-slate-400">
-                                This action cannot be undone. This will permanently delete your
-                                studio listing and remove your data from our servers.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter className="mt-4">
-                              <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
-                                Cancel
-                              </Button>
-                              <Button onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">
-                                Delete Studio
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Link href="/dashboard/add-studio">
+              <Button className="bg-violet-600 hover:bg-violet-700 text-white">
+                <PlusCircle className="w-4 h-4 mr-2" />
+                Add New Studio
+              </Button>
+            </Link>
           </div>
         </div>
 
+        {displayError && !showSkeleton && (
+          <div className="flex flex-col gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-600 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 shrink-0" />
+              <p className="text-sm">{displayError}</p>
+            </div>
+            {email && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={refresh}
+                className="h-9 border-rose-500/30 bg-transparent text-rose-600 hover:bg-rose-500/15 dark:text-rose-200 dark:hover:text-white"
+              >
+                Try again
+              </Button>
+            )}
+          </div>
+        )}
+
+        {showSkeleton && (
+          <div
+            className={`border rounded-xl overflow-hidden ${isDark ? "bg-[#121212] border-white/5" : "bg-white border-gray-200 shadow-sm"}`}
+          >
+            <div className="space-y-3 p-6">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={index}
+                  className={`h-16 animate-pulse rounded-lg ${isDark ? "bg-white/5" : "bg-gray-100"}`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {showEmpty && (
+          <div
+            className={`rounded-2xl border p-12 text-center ${isDark ? "border-white/5 bg-[#121212]" : "border-gray-200 bg-white shadow-sm"}`}
+          >
+            <div
+              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${isDark ? "bg-violet-500/10 text-violet-400" : "bg-violet-100 text-violet-600"}`}
+            >
+              <Building2 className="h-7 w-7" />
+            </div>
+            <h2
+              className={`mt-4 text-xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}
+            >
+              No studios listed yet
+            </h2>
+            <p
+              className={`mx-auto mt-2 max-w-md text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}
+            >
+              Publish your first production space to start receiving booking
+              requests.
+            </p>
+            <Link href="/dashboard/add-studio">
+              <Button className="mt-6 bg-violet-600 hover:bg-violet-700 text-white">
+                <PlusCircle className="w-4 h-4 mr-2" />
+                Add New Studio
+              </Button>
+            </Link>
+          </div>
+        )}
+
+        {studios.length > 0 && (
+          <div
+            className={`border rounded-xl overflow-hidden ${isDark ? "bg-[#121212] border-white/5" : "bg-white border-gray-200 shadow-sm"}`}
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead
+                  className={`border-b text-xs uppercase font-semibold tracking-wider ${isDark ? "bg-white/5 border-white/5 text-gray-400" : "bg-gray-50 border-gray-200 text-gray-500"}`}
+                >
+                  <tr>
+                    <th className="px-6 py-4">Studio Space</th>
+                    <th className="px-6 py-4">Category</th>
+                    <th className="px-6 py-4">Hourly Rate</th>
+                    <th className="px-6 py-4">Capacity</th>
+                    <th className="px-6 py-4">Rating</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody
+                  className={`divide-y ${isDark ? "divide-white/5" : "divide-gray-200"}`}
+                >
+                  {studios.map((studio) => {
+                    const id = studioId(studio);
+
+                    return (
+                      <tr
+                        key={id || studio.title}
+                        className={`transition-colors ${isDark ? "hover:bg-white/5" : "hover:bg-gray-50"}`}
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-4">
+                            <div
+                              className={`relative w-16 h-12 rounded-md overflow-hidden shrink-0 ${isDark ? "bg-slate-800" : "bg-gray-200"}`}
+                            >
+                              <Image
+                                src={studioImage(studio)}
+                                alt={studio.title || "Studio"}
+                                className="w-full h-full object-cover opacity-90"
+                                fill
+                                unoptimized
+                                sizes="64px"
+                              />
+                            </div>
+                            <div>
+                              <p
+                                className={`font-semibold text-sm ${isDark ? "text-white" : "text-gray-900"}`}
+                              >
+                                {studio.title || "Untitled Studio"}
+                              </p>
+                              <p
+                                className={`text-xs flex items-center gap-1 mt-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                              >
+                                <MapPin className="w-3 h-3" />
+                                {studio.location || "Location not specified"}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap ${
+                              isDark
+                                ? "bg-violet-950/40 text-violet-400 border-violet-900/50"
+                                : "bg-violet-50 text-violet-700 border-violet-200"
+                            }`}
+                          >
+                            {studio.category || "Studio"}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span
+                            className={`font-bold ${isDark ? "text-white" : "text-gray-900"}`}
+                          >
+                            {studioRate(studio)}
+                          </span>
+                          <span
+                            className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                          >
+                            /hr
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span
+                            className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                          >
+                            {studioCapacity(studio)} people
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div
+                            className={`flex items-center gap-1 text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                          >
+                            <Star className="w-4 h-4 text-violet-500 fill-violet-500" />
+                            <span>{studioRating(studio)}</span>
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              href={`/studios/${id}`}
+                              aria-label="View studio"
+                              className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors ${isDark ? "text-gray-400 hover:text-white hover:bg-white/5" : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"}`}
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </Link>
+
+                            <Link href={`/dashboard/add-studio?edit=${id}`}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={`h-8 ${
+                                  isDark
+                                    ? "border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                                    : "border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                                }`}
+                              >
+                                <Edit className="w-3.5 h-3.5 mr-1.5" />
+                                Update
+                              </Button>
+                            </Link>
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setDeleteError(null);
+                                setDeleteTarget(studio);
+                              }}
+                              className={`h-8 w-8 ${isDark ? "text-gray-400 hover:text-red-400 hover:bg-red-950/30" : "text-gray-500 hover:text-red-500 hover:bg-red-50"}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Delete Dialog */}
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) closeDeleteDialog();
+        }}
+      >
+        <DialogContent
+          className={`border sm:max-w-md ${isDark ? "bg-slate-900 border-slate-800 text-slate-200" : "bg-white border-gray-200 text-gray-900"}`}
+        >
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription
+              className={`${isDark ? "text-slate-400" : "text-gray-500"}`}
+            >
+              {deleteTarget
+                ? `This will permanently delete "${deleteTarget.title || "this studio"}" and remove it from our servers. This action cannot be undone.`
+                : "This action cannot be undone."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteError && (
+            <div className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-600 dark:text-rose-300">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{deleteError}</p>
+            </div>
+          )}
+
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deleting}
+              onClick={closeDeleteDialog}
+              className={`${
+                isDark
+                  ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                  : "border-gray-300 text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleDelete()}
+              disabled={deleting}
+              className="gap-2 bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Delete Studio
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

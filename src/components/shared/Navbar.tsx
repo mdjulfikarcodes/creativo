@@ -24,10 +24,10 @@ export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // 👇 নতুন স্টেট: ইমেজ লোড ফেইল করলে true হবে
   const [imgError, setImgError] = useState(false);
 
   const userName = session?.user?.name ?? "Account";
+  const userEmail = session?.user?.email ?? "";
   const userImage = session?.user?.image;
   const userInitials = userName
     .split(" ")
@@ -205,7 +205,6 @@ export default function Navbar() {
                 className="flex items-center gap-3 focus:outline-none"
               >
                 <div className="h-9 w-9 overflow-hidden rounded-full ring-2 ring-[#8b5cf6] ring-offset-2 ring-offset-white dark:ring-offset-[#0a0a0a]">
-                  {/* 👇 ভুয়া ইমেজ হলে onError ট্রিগার হবে এবং Initials দেখাবে */}
                   {userImage && !imgError ? (
                     <img
                       src={userImage}
@@ -227,14 +226,36 @@ export default function Navbar() {
                 </svg>
               </button>
 
-              {/* Dropdown Menu */}
+              {/* 👇 Dropdown Menu (ড্যাশবোর্ডের লিংকসহ) */}
               {isDropdownOpen && (
-                <div className="absolute right-0 mt-3 w-48 rounded-xl border border-gray-200 bg-white py-2 shadow-2xl dark:border-white/10 dark:bg-[#121212]">
-                  <Link href="/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">Dashboard</Link>
-                  <Link href="/dashboard/add-studio" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">Add New Studio</Link>
-                  <Link href="/dashboard/my-studio" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">My Studio Listings</Link>
-                  <Link href="/dashboard/my-bookings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">My Bookings</Link>
+                <div className="absolute right-0 mt-3 w-56 rounded-xl border border-gray-200 bg-white py-2 shadow-2xl dark:border-white/10 dark:bg-[#121212]">
+                  
+                  {/* ইউজারের নাম ও ইমেইল */}
+                  <div className="px-4 py-2 border-b border-gray-100 dark:border-white/5 mb-1">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {userName}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {userEmail}
+                    </p>
+                  </div>
+
+                  {/* লিংকগুলো */}
+                  <Link href="/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">
+                    Overview
+                  </Link>
+                  <Link href="/dashboard/add-studio" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">
+                    Add New Studio
+                  </Link>
+                  <Link href="/dashboard/my-studio" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">
+                    My Studio Listings
+                  </Link>
+                  <Link href="/dashboard/my-bookings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">
+                    My Bookings
+                  </Link>
+                  
                   <div className="my-1 border-t border-gray-200 dark:border-white/10"></div>
+                  
                   <button 
                     onClick={handleSignOut}
                     className="block w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-red-50 hover:text-red-600 dark:text-red-400 dark:hover:bg-white/5 dark:hover:text-red-300"

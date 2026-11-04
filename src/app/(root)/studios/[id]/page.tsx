@@ -7,7 +7,6 @@ import Image from "next/image";
 import BookingDialog from "@/components/booking/BookingDialog";
 import { extractStudio, parseStudioList } from "@/lib/studios";
 import type { Studio } from "@/lib/types";
-import { CURRENT_USER } from "@/lib/user";
 
 type StudioPageProps = {
   params: Promise<{ id: string }>;
@@ -234,7 +233,6 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
           studioTitle={title}
           studioImage={imageUrl}
           hourlyRate={Number(hourlyRate) || 0}
-          userEmail={CURRENT_USER.email}
         />
 
         <p className="mt-3 text-center text-xs text-gray-500">

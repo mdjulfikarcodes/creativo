@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "cn";
-import { ArrowLeft, CalendarCheck, Camera, PlusCircle } from "lucide-react";
+import { cn } from "@/lib/utils"; 
+import { ArrowLeft, CalendarCheck, Camera, PlusCircle, LayoutDashboard } from "lucide-react"; 
 
 const navItems = [
+  { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { name: "Add Studio", href: "/dashboard/add-studio", icon: PlusCircle },
   { name: "My Bookings", href: "/dashboard/my-bookings", icon: CalendarCheck },
   { name: "My Studio", href: "/dashboard/my-studio", icon: Camera },
@@ -15,26 +16,19 @@ const Sidebar = () => {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-[250px] shrink-0 flex-col border-r border-white/5 bg-[#0a0a0a] px-4 py-6">
-      {/* Brand */}
-      <Link href="/" className="flex items-center gap-2 px-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#8b5cf6]">
-          <Camera className="h-5 w-5 text-white" />
-        </div>
-        <span className="text-xl font-bold tracking-tight text-white">
-          Creativo<span className="text-[#8b5cf6]">.</span>
-        </span>
-      </Link>
-
-      <p className="mt-8 px-3 text-xs font-semibold uppercase tracking-widest text-gray-500">
+    // 👇 bg-background এবং border-border ব্যবহার করা হলো
+    <aside className="flex h-full w-[250px] shrink-0 flex-col border-r border-border bg-background px-4">
+      
+      <p className="mt-8 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Dashboard
       </p>
 
-      {/* Routes */}
       <nav className="mt-3 flex flex-col gap-1">
         {navItems.map(({ name, href, icon: Icon }) => {
           const isActive =
-            pathname === href || pathname.startsWith(`${href}/`);
+            href === "/dashboard"
+              ? pathname === "/dashboard"
+              : pathname === href || pathname.startsWith(`${href}/`);
 
           return (
             <Link
@@ -44,14 +38,14 @@ const Sidebar = () => {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-[#8b5cf6]/15 text-white"
-                  : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  ? "bg-primary/10 text-primary" // 👈 Shadcn এর প্রাইমারি কালার
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               <Icon
                 className={cn(
                   "h-5 w-5",
-                  isActive ? "text-[#8b5cf6]" : "text-gray-500"
+                  isActive ? "text-primary" : "text-muted-foreground"
                 )}
               />
               {name}
@@ -60,12 +54,11 @@ const Sidebar = () => {
         })}
       </nav>
 
-      {/* Back to site */}
       <Link
         href="/"
-        className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
+        className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       >
-        <ArrowLeft className="h-5 w-5 text-gray-500" />
+        <ArrowLeft className="h-5 w-5" />
         Back to Home
       </Link>
     </aside>

@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
+import { useSession } from "@/lib/auth-client";
 import {
   calculateHours,
   formatBookingDate,
@@ -33,7 +34,6 @@ type BookingDialogProps = {
   studioTitle: string;
   studioImage: string; // 👈 নতুন যোগ করা হয়েছে
   hourlyRate: number;
-  userEmail: string;
 };
 
 const inputClassName =
@@ -44,9 +44,10 @@ export default function BookingDialog({
   studioTitle,
   studioImage, // 👈 নতুন যোগ করা হয়েছে
   hourlyRate,
-  userEmail,
 }: BookingDialogProps) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const userEmail = session?.user?.email ?? "";
 
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState("");
@@ -104,6 +105,16 @@ export default function BookingDialog({
 
     if (!Number.isFinite(hourlyRate) || hourlyRate <= 0) {
       setError("This studio does not have a valid hourly rate yet.");
+      return;
+    }
+
+    if (!userEmail) {
+      setError("Please sign in to book this workspace.");
+      toast.add({
+        type: "error",
+        title: "Sign in required",
+        description: "Please sign in to book this workspace.",
+      });
       return;
     }
 

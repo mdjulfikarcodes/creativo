@@ -1,10 +1,18 @@
 "use client";
 
+import { Suspense, useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { MapPin, DollarSign, Users, Image as ImageIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import {
+  AlertCircle,
+  Loader2,
+  MapPin,
+  DollarSign,
+  Users,
+  Image as ImageIcon,
+} from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +21,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/toast";
+import { useSession } from "@/lib/auth-client";
+import { getStudioById } from "@/lib/studios";
 
 // --- Zod Schema for Validation ---
 const formSchema = z.object({
@@ -37,7 +47,32 @@ const PRESET_IMAGES = [
 ];
 
 export default function AddStudioPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[400px] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+        </div>
+      }
+    >
+      <StudioForm />
+    </Suspense>
+  );
+}
+
+function StudioForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit");
+  const isEdit = Boolean(editId);
+
+  const { data: session } = useSession();
+  const email = session?.user?.email ?? "";
+  const hostName = session?.user?.name ?? "";
+
+  const [loadingStudio, setLoadingStudio] = useState(isEdit);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,24 +91,110 @@ export default function AddStudioPage() {
 
   const imageUrl = useWatch({ control: form.control, name: "imageUrl" });
 
+  useEffect(() => {
+    if (!editId) return;
+
+    let active = true;
+
+    getStudioById(editId)
+      .then((studio) => {
+        if (!active) return;
+
+        if (!studio) {
+          setLoadError("We couldn't find this studio listing.");
+          return;
+        }
+
+        const amenities = Array.isArray(studio.amenities)
+          ? studio.amenities
+          : typeof studio.amenities === "string"
+            ? studio.amenities
+                .split(",")
+                .map((item) => item.trim())
+                .filter(Boolean)
+            : [];
+
+        const toFieldValue = (value: unknown) =>
+          value === undefined || value === null ? "" : String(value);
+
+        form.reset({
+          title: studio.title ?? "",
+          category: studio.category ?? "",
+          location: studio.location ?? "",
+          overview: studio.overview ?? studio.description ?? "",
+          hourlyRate: toFieldValue(studio.hourlyRate),
+          securityDeposit: toFieldValue(studio.securityDeposit),
+          maxCapacity: toFieldValue(studio.maxCapacity),
+          imageUrl: studio.imageUrl ?? studio.image ?? "",
+          amenities,
+        });
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setLoadError(
+          err instanceof Error ? err.message : "Failed to load this studio.",
+        );
+      })
+      .finally(() => {
+        if (active) setLoadingStudio(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [editId, form]);
+
   const AMENITIES = [
-  "3-Wall Infinity Cyclorama", "Profoto Lighting Rig",
-  "Acoustic Soundproofing NC-20", "Hair & Makeup Station",
-  "Drive-In Equipment Bay", "High-Speed Fiber Wi-Fi (10Gbps)",
-  "Client Lounge & Kitchenette", "Air Conditioning & Heating",
-  "Freight Elevator Access", "Private Dressing Room",
-  "4K Video Cameras", "Broadcast Microphones",
-  "Ceramic Pottery Wheels", "Easels & Drying Racks",
-];
+    "3-Wall Infinity Cyclorama", "Profoto Lighting Rig",
+    "Acoustic Soundproofing NC-20", "Hair & Makeup Station",
+    "Drive-In Equipment Bay", "High-Speed Fiber Wi-Fi (10Gbps)",
+    "Client Lounge & Kitchenette", "Air Conditioning & Heating",
+    "Freight Elevator Access", "Private Dressing Room",
+    "4K Video Cameras", "Broadcast Microphones",
+    "Ceramic Pottery Wheels", "Easels & Drying Racks",
+  ];
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    const baseUrl = (process.env.NEXT_PUBLIC_SERVER_BASE_URL ?? "").replace(
+      /\/+$/,
+      "",
+    );
+
+    if (!baseUrl) {
+      toast.add({
+        type: "error",
+        title: "Studio API is not configured",
+        description: "Set NEXT_PUBLIC_SERVER_BASE_URL in .env.local.",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+
     try {
-      const result = await fetch(`${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/studio`, {
-        method: "POST",
+      const payload = {
+        ...values,
+        hourlyRate: Number(values.hourlyRate),
+        securityDeposit: Number(values.securityDeposit),
+        maxCapacity: Number(values.maxCapacity),
+        ...(email ? { ownerEmail: email, hostEmail: email } : {}),
+        ...(hostName ? { hostName } : {}),
+      };
+
+      const endpoint =
+        isEdit && editId
+          ? `${baseUrl}/studio/${encodeURIComponent(editId)}`
+          : `${baseUrl}/studio`;
+
+      const result = await fetch(endpoint, {
+        method: isEdit ? "PATCH" : "POST",
+        credentials: "include",
+        cache: "no-store",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify(payload),
       });
 
       if (!result.ok) {
@@ -81,38 +202,85 @@ export default function AddStudioPage() {
         throw new Error(
           typeof data?.message === "string"
             ? data.message
-            : "Failed to publish studio."
+            : isEdit
+              ? "Failed to update studio."
+              : "Failed to publish studio."
         );
       }
 
       toast.add({
         type: "success",
-        title: "Studio published",
-        description: "Your studio listing has been created successfully.",
+        title: isEdit ? "Studio updated" : "Studio published",
+        description: isEdit
+          ? "Your studio listing has been updated successfully."
+          : "Your studio listing has been created successfully.",
       });
       router.push("/dashboard/my-studio");
+      router.refresh();
     } catch (error) {
       toast.add({
         type: "error",
-        title: "Could not publish studio",
+        title: isEdit ? "Could not update studio" : "Could not publish studio",
         description:
           error instanceof Error ? error.message : "Please try again.",
       });
+    } finally {
+      setSubmitting(false);
     }
   }
 
+  if (loadingStudio) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-4xl py-12 px-4">
+        <div className="flex flex-col gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-600 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <p className="text-sm">{loadError}</p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push("/dashboard/my-studio")}
+            className="h-9 border-rose-500/30 bg-transparent text-rose-600 hover:bg-rose-500/15 dark:text-rose-200 dark:hover:text-white"
+          >
+            Back to My Studio
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 py-12 px-4 text-slate-200">
+    <div className="min-h-screen bg-background text-foreground py-12 px-4">
       <div className="max-w-4xl mx-auto space-y-6">
+
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {isEdit ? "Edit Studio Listing" : "Add New Studio"}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {isEdit
+              ? "Update your production space details and save your changes."
+              : "Publish a new production space and start receiving bookings."}
+          </p>
+        </div>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             
             {/* ১. Space Overview Section */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 space-y-6">
+            <div className="bg-card border border-border rounded-xl p-6 md:p-8 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-white">Space Overview</h2>
-                <p className="text-sm text-slate-400 mt-1">Primary identity and location details</p>
+                <h2 className="text-xl font-semibold">Space Overview</h2>
+                <p className="text-sm text-muted-foreground mt-1">Primary identity and location details</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -120,7 +288,7 @@ export default function AddStudioPage() {
                   <FormItem className="col-span-1 md:col-span-2">
                     <FormLabel>Studio Title *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Apex Industrial Daylight Loft & Cyclorama" className="bg-slate-950 border-slate-700" {...field} />
+                      <Input placeholder="e.g. Apex Industrial Daylight Loft & Cyclorama" className="bg-background border-input" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -129,9 +297,9 @@ export default function AddStudioPage() {
                 <FormField control={form.control} name="category" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || null}>
                       <FormControl>
-                        <SelectTrigger className="bg-slate-950 border-slate-700">
+                        <SelectTrigger className="bg-background border-input">
                           <SelectValue placeholder="Select a category" />
                         </SelectTrigger>
                       </FormControl>
@@ -149,9 +317,9 @@ export default function AddStudioPage() {
                   <FormItem>
                     <FormLabel>Location (District, Riyadh) *</FormLabel>
                     <div className="relative">
-                      <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                      <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <FormControl>
-                        <Input placeholder="e.g. Jax District, Diriyah, Riyadh" className="pl-9 bg-slate-950 border-slate-700" {...field} />
+                        <Input placeholder="e.g. Jax District, Diriyah, Riyadh" className="pl-9 bg-background border-input" {...field} />
                       </FormControl>
                     </div>
                     <FormMessage />
@@ -164,7 +332,7 @@ export default function AddStudioPage() {
                     <FormControl>
                       <Textarea 
                         placeholder="Describe the ceiling height, daylight orientation, electric panel capacity (e.g. 200A 3-phase), sound isolation level, and suitable production types..." 
-                        className="min-h-[120px] bg-slate-950 border-slate-700 resize-none" 
+                        className="min-h-[120px] bg-background border-input resize-none" 
                         {...field} 
                       />
                     </FormControl>
@@ -175,10 +343,10 @@ export default function AddStudioPage() {
             </div>
 
             {/* ২. Pricing & Capacity Section */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 space-y-6">
+            <div className="bg-card border border-border rounded-xl p-6 md:p-8 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-white">Pricing & Capacity</h2>
-                <p className="text-sm text-slate-400 mt-1">Define hourly rental rates, deposits, and crew limits</p>
+                <h2 className="text-xl font-semibold">Pricing & Capacity</h2>
+                <p className="text-sm text-muted-foreground mt-1">Define hourly rental rates, deposits, and crew limits</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -186,9 +354,9 @@ export default function AddStudioPage() {
                   <FormItem>
                     <FormLabel>Hourly Rate (SAR) *</FormLabel>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                      <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <FormControl>
-                        <Input type="number" placeholder="120" className="pl-9 bg-slate-950 border-slate-700" {...field} />
+                        <Input type="number" placeholder="120" className="pl-9 bg-background border-input" {...field} />
                       </FormControl>
                     </div>
                     <FormMessage />
@@ -199,9 +367,9 @@ export default function AddStudioPage() {
                   <FormItem>
                     <FormLabel>Security Deposit (SAR) *</FormLabel>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                      <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <FormControl>
-                        <Input type="number" placeholder="250" className="pl-9 bg-slate-950 border-slate-700" {...field} />
+                        <Input type="number" placeholder="250" className="pl-9 bg-background border-input" {...field} />
                       </FormControl>
                     </div>
                     <FormMessage />
@@ -212,9 +380,9 @@ export default function AddStudioPage() {
                   <FormItem>
                     <FormLabel>Max Capacity (People) *</FormLabel>
                     <div className="relative">
-                      <Users className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                      <Users className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <FormControl>
-                        <Input type="number" placeholder="15" className="pl-9 bg-slate-950 border-slate-700" {...field} />
+                        <Input type="number" placeholder="15" className="pl-9 bg-background border-input" {...field} />
                       </FormControl>
                     </div>
                     <FormMessage />
@@ -224,19 +392,19 @@ export default function AddStudioPage() {
             </div>
 
             {/* ৩. Studio Cover Imagery */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 space-y-6">
+            <div className="bg-card border border-border rounded-xl p-6 md:p-8 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-white">Studio Cover Imagery</h2>
-                <p className="text-sm text-slate-400 mt-1">Enter an image URL or choose from curated high-res studio assets</p>
+                <h2 className="text-xl font-semibold">Studio Cover Imagery</h2>
+                <p className="text-sm text-muted-foreground mt-1">Enter an image URL or choose from curated high-res studio assets</p>
               </div>
 
               <FormField control={form.control} name="imageUrl" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Image URL (Direct link or ImgBB) *</FormLabel>
                   <div className="relative">
-                    <ImageIcon className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                    <ImageIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <FormControl>
-                      <Input placeholder="/src/assets/images/hero_cyclorama_studio...jpg" className="pl-9 bg-slate-950 border-slate-700" {...field} />
+                      <Input placeholder="/src/assets/images/hero_cyclorama_studio...jpg" className="pl-9 bg-background border-input" {...field} />
                     </FormControl>
                   </div>
                   <FormMessage />
@@ -244,7 +412,7 @@ export default function AddStudioPage() {
               )} />
 
               <div>
-                <p className="text-sm font-medium text-slate-300 mb-3">Or pick a production photo preset:</p>
+                <p className="text-sm font-medium text-muted-foreground mb-3">Or pick a production photo preset:</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {PRESET_IMAGES.map((img) => (
                     <button
@@ -252,11 +420,11 @@ export default function AddStudioPage() {
                       type="button"
                       onClick={() => form.setValue("imageUrl", img.url)}
                       className={`relative overflow-hidden rounded-lg border-2 transition-all ${
-                        imageUrl === img.url ? "border-violet-500 ring-2 ring-violet-500/20" : "border-slate-700 hover:border-slate-500"
+                        imageUrl === img.url ? "border-violet-500 ring-2 ring-violet-500/20" : "border-border hover:border-muted-foreground"
                       }`}
                     >
                       <img src={img.url} alt={img.label} className="w-full h-24 object-cover opacity-80 hover:opacity-100 transition-opacity" />
-                      <div className="absolute bottom-0 w-full bg-slate-950/80 text-xs py-1.5 text-center text-white">
+                      <div className="absolute bottom-0 w-full bg-background/80 text-xs py-1.5 text-center text-foreground">
                         {img.label}
                       </div>
                     </button>
@@ -266,10 +434,10 @@ export default function AddStudioPage() {
             </div>
 
             {/* ৪. Production Amenities & Features */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 space-y-6">
+            <div className="bg-card border border-border rounded-xl p-6 md:p-8 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-white">Production Amenities & Features</h2>
-                <p className="text-sm text-slate-400 mt-1">Select all equipment and facilities available at your studio</p>
+                <h2 className="text-xl font-semibold">Production Amenities & Features</h2>
+                <p className="text-sm text-muted-foreground mt-1">Select all equipment and facilities available at your studio</p>
               </div>
 
               <FormField
@@ -289,11 +457,10 @@ export default function AddStudioPage() {
                                 key={item}
                                 className={`flex flex-row items-center space-x-3 space-y-0 rounded-lg border p-3 cursor-pointer transition-colors ${
                                   field.value?.includes(item) 
-                                    ? "bg-violet-950/30 border-violet-600 text-white" 
-                                    : "bg-slate-950 border-slate-700 text-slate-400 hover:border-slate-500"
+                                    ? "bg-primary/10 border-primary text-primary" 
+                                    : "bg-background border-border text-muted-foreground hover:border-muted-foreground"
                                 }`}
                                 onClick={() => {
-                                  // Custom toggle logic to make the whole div clickable
                                   const current = field.value || [];
                                   const updated = current.includes(item)
                                     ? current.filter((val) => val !== item)
@@ -309,7 +476,7 @@ export default function AddStudioPage() {
                                         ? field.onChange([...(field.value || []), item])
                                         : field.onChange(field.value?.filter((value) => value !== item));
                                     }}
-                                    className={`border-slate-500 ${field.value?.includes(item) ? "bg-violet-600 border-violet-600 text-white" : ""}`}
+                                    className={`border-muted-foreground ${field.value?.includes(item) ? "bg-primary border-primary text-primary-foreground" : ""}`}
                                   />
                                 </FormControl>
                                 <FormLabel className="font-normal cursor-pointer text-sm w-full">
@@ -328,30 +495,43 @@ export default function AddStudioPage() {
             </div>
 
             {/* ৫. Host Information (Read-Only) */}
-            <div className="bg-slate-900 border border-slate-800 border-dashed rounded-xl p-6 md:p-8 space-y-6">
+            <div className="bg-card border border-border border-dashed rounded-xl p-6 md:p-8 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-white">Host Information (Read-Only)</h2>
-                <p className="text-sm text-slate-400 mt-1">This studio listing will be tied to your verified account credentials</p>
+                <h2 className="text-xl font-semibold">Host Information (Read-Only)</h2>
+                <p className="text-sm text-muted-foreground mt-1">This studio listing will be tied to your verified account credentials</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-400">Host Name</label>
-                  <Input value="Julfikar Rahman" readOnly disabled className="bg-slate-950/50 border-slate-800 text-slate-500 cursor-not-allowed" />
+                  <label className="text-sm font-medium text-muted-foreground">Host Name</label>
+                  <Input value={hostName || "Not signed in"} readOnly disabled className="bg-muted text-muted-foreground cursor-not-allowed" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-400">Host Email</label>
-                  <Input value="julfikar8574@gmail.com" readOnly disabled className="bg-slate-950/50 border-slate-800 text-slate-500 cursor-not-allowed" />
+                  <label className="text-sm font-medium text-muted-foreground">Host Email</label>
+                  <Input value={email || "Not signed in"} readOnly disabled className="bg-muted text-muted-foreground cursor-not-allowed" />
                 </div>
               </div>
             </div>
 
             {/* Actions */}
             <div className="flex items-center justify-end gap-4 pb-12">
-              <Button type="button" variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white" onClick={() => router.back()}>
+              <Button type="button" variant="outline" onClick={() => router.back()} disabled={submitting}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-violet-600 hover:bg-violet-700 text-white min-w-[150px]">
-                Publish Studio Listing
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="bg-violet-600 hover:bg-violet-700 text-white min-w-[150px] gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {isEdit ? "Saving..." : "Publishing..."}
+                  </>
+                ) : isEdit ? (
+                  "Save Changes"
+                ) : (
+                  "Publish Studio Listing"
+                )}
               </Button>
             </div>
             
