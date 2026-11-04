@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cn } from "cn";
-import { MapPin, Star, Users } from "lucide-react";
+import { DollarSign, MapPin, Star, Users } from "lucide-react";
 
 import type { Studio } from "@/lib/types";
 
@@ -71,7 +71,7 @@ export default function StudioCard({ studio, href, className }: StudioCardProps)
         <div className="mt-auto flex items-end justify-between gap-4 border-t border-gray-100 pt-4 dark:border-white/5">
           <div className="flex items-baseline gap-1">
             <span className="text-2xl font-bold text-gray-900 dark:text-white">{price}</span>
-            <span className="text-xs font-semibold text-violet-500 dark:text-violet-400">SAR</span>
+            <span className="text-xs font-semibold text-violet-500 dark:text-violet-400"><DollarSign /></span>
             <span className="text-sm text-gray-500">/hr</span>
           </div>
 

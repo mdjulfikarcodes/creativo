@@ -3,7 +3,6 @@
 import { useState, useSyncExternalStore, type MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import Image from "next/image";
 import { useTheme } from "next-themes";
 import { Sun, Moon } from "lucide-react";
 import { signOut, useSession } from "@/lib/auth-client";
@@ -24,6 +23,9 @@ export default function Navbar() {
   const isAuthenticated = Boolean(session?.user);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // 👇 নতুন স্টেট: ইমেজ লোড ফেইল করলে true হবে
+  const [imgError, setImgError] = useState(false);
 
   const userName = session?.user?.name ?? "Account";
   const userImage = session?.user?.image;
@@ -203,14 +205,13 @@ export default function Navbar() {
                 className="flex items-center gap-3 focus:outline-none"
               >
                 <div className="h-9 w-9 overflow-hidden rounded-full ring-2 ring-[#8b5cf6] ring-offset-2 ring-offset-white dark:ring-offset-[#0a0a0a]">
-                  {/* 👇 এখানে ভুয়া লিংক চেক করা হয়েছে */}
-                  {userImage && !userImage.includes("jutipivoberuwep") ? (
-                    <Image
+                  {/* 👇 ভুয়া ইমেজ হলে onError ট্রিগার হবে এবং Initials দেখাবে */}
+                  {userImage && !imgError ? (
+                    <img
                       src={userImage}
                       alt={userName}
                       className="h-full w-full object-cover"
-                      width={36}
-                      height={36}
+                      onError={() => setImgError(true)}
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-[#8b5cf6] text-xs font-semibold text-white">

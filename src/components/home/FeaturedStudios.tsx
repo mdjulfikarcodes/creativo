@@ -1,26 +1,14 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { connection } from "next/server"; // 👈 নতুন যোগ করা হলো
 import StudioCard from "@/components/cards/StudioCard";
 import SectionHeading from "@/components/shared/SectionHeading";
 import { parseStudioList } from "@/lib/studios";
 import type { Studio } from "@/lib/types";
 
-export default async function FeaturedStudios() {
-  let studiosList: Studio[] = [];
-
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/studio`, {
-      cache: "no-store",
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      studiosList = parseStudioList(data).slice(0, 6);
-    }
-  } catch {
-    // Ignore fetch failures and render the empty state below.
-  }
-
+// ১. মেইন কম্পোনেন্ট (সিঙ্ক্রোনাস)
+export default function FeaturedStudios() {
   return (
     <section
       id="featured-studios"
@@ -45,18 +33,58 @@ export default async function FeaturedStudios() {
           }
         />
 
-        {studiosList.length > 0 ? (
-          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {studiosList.map((studio) => (
-              <StudioCard key={studio._id || studio.id} studio={studio} />
-            ))}
-          </div>
-        ) : (
-          <div className="mt-12 text-center text-gray-500 py-10">
-            No featured studios available at the moment.
-          </div>
-        )}
+        {/* ২. Suspense বাউন্ডারি */}
+        <Suspense fallback={<FeaturedStudiosSkeleton />}>
+          <FeaturedStudiosList />
+        </Suspense>
       </div>
     </section>
+  );
+}
+
+// ৩. ডাটা ফেচিং কম্পোনেন্ট (async)
+async function FeaturedStudiosList() {
+  // 👇 এই লাইনটি Next.js-কে বলে দেয় যে এটি ডাইনামিক ডাটা
+  await connection(); 
+
+  let studiosList: Studio[] = [];
+
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL || "http://localhost:5000";
+    const res = await fetch(`${baseUrl}/studio`, { cache: "no-store" });
+
+    if (res.ok) {
+      const data = await res.json();
+      studiosList = parseStudioList(data).slice(0, 6);
+    }
+  } catch (error) {
+    console.error("Failed to fetch featured studios:", error);
+  }
+
+  if (studiosList.length === 0) {
+    return (
+      <div className="mt-12 text-center text-gray-500 py-10">
+        No featured studios available at the moment.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {studiosList.map((studio) => (
+        <StudioCard key={studio._id || studio.id} studio={studio} />
+      ))}
+    </div>
+  );
+}
+
+// ৪. লোডিং স্কেলেটন
+function FeaturedStudiosSkeleton() {
+  return (
+    <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 animate-pulse">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="h-80 rounded-2xl bg-gray-100 dark:bg-[#121212]" />
+      ))}
+    </div>
   );
 }

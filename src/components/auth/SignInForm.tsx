@@ -71,7 +71,7 @@ export default function SignInForm() {
       description: "You're signed in. Time to find your next studio.",
     });
 
-    router.push("/dashboard");
+    router.push("/");
   }
 
   return (

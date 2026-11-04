@@ -19,9 +19,25 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: false, // 👈 ইমেইল ভেরিফিকেশন সম্পূর্ণ বন্ধ
+    autoSignIn: true, // 👈 রেজিস্ট্রেশন করার পর অটো লগইন হবে
     minPasswordLength: 8,
     maxPasswordLength: 72,
   },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+    },
+  },
+  // 👇 Account Linking সেকশনটি আপাতত সরিয়ে দেওয়া হলো, 
+  // কারণ এটি দ্বিতীয়বার লগইনে কনফ্লিক্ট তৈরি করছে।
+  // account: {
+  //   accountLinking: {
+  //     enabled: true,
+  //     trustedProviders: ["google"],
+  //   },
+  // },
   user: {
     additionalFields: {
       photoUrl: {

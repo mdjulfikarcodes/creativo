@@ -115,12 +115,7 @@ export default function HeroSlider() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
                 </Link>
-                <Link
-                  href="/host"
-                  className="rounded-lg border border-white/20 bg-[#121212]/80 px-8 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/10 hover:border-white/40"
-                >
-                  Host Your Space
-                </Link>
+                
               </div>
             </div>
           </SwiperSlide>
