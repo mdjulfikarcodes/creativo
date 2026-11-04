@@ -1,3 +1,4 @@
+// app/login/page.tsx  (বা app/signin/page.tsx)
 "use client";
 
 import { useState } from "react";
@@ -22,8 +23,9 @@ import {
 import { toast } from "@/components/ui/toast";
 import { signIn } from "@/lib/auth-client";
 
+// ✅ FIX: z.string().email() ব্যবহার করেছি
 const signInSchema = z.object({
-  email: z.email("Enter a valid email address"),
+  email: z.string().email("Enter a valid email address"),
   password: z.string().min(1, "Password is required"),
   rememberMe: z.boolean(),
 });
@@ -50,10 +52,10 @@ export default function SignInForm() {
   async function onSubmit(values: SignInValues) {
     setServerError(null);
 
+    // ✅ FIX: rememberMe বাদ — Better Auth email sign-in-এ সাপোর্ট নেই
     const { error } = await signIn.email({
       email: values.email,
       password: values.password,
-      rememberMe: values.rememberMe,
     });
 
     if (error) {
@@ -70,7 +72,6 @@ export default function SignInForm() {
     });
 
     router.push("/dashboard");
-    router.refresh();
   }
 
   return (

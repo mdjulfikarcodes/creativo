@@ -1,3 +1,4 @@
+// src/app/signup/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -22,12 +23,11 @@ import {
 import { toast } from "@/components/ui/toast";
 import { signUp } from "@/lib/auth-client";
 
-// ১. স্কিমায় photoUrl যোগ করা হলো
 const signUpSchema = z
   .object({
     name: z.string().min(2, "Please enter your full name"),
     email: z.string().email("Enter a valid email address"),
-    photoUrl: z.string().url("Enter a valid image URL").or(z.literal("")), // অপশনাল রাখা হলো
+    photoUrl: z.string().url("Enter a valid image URL").or(z.literal("")),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters")
@@ -68,15 +68,31 @@ export default function SignUpForm() {
   async function onSubmit(values: SignUpValues) {
     setServerError(null);
 
- 
+    // ✅ FIX: callbackURL যোগ + onSuccess-এ navigate
+    // ড্যাশবোর্ড না থাকলে "/" (হোম) দিন।
+    // ড্যাশবোর্ড চাইলে আগে src/app/dashboard/page.tsx বানান।
     const { error } = await signUp.email({
       name: values.name,
       email: values.email,
       password: values.password,
-      image: values.photoUrl, 
+      image: values.photoUrl || undefined,
+      photoUrl: values.photoUrl || undefined,
+      callbackURL: "/",
       fetchOptions: {
-        body: {
-          photoUrl: values.photoUrl,
+        onSuccess: () => {
+          toast.add({
+            type: "success",
+            title: "Account created",
+            description: "Welcome to Creativo. Let's find your first studio.",
+          });
+          router.push("/");      // ✅ হোম পেজ
+          router.refresh();
+        },
+        onError: (ctx) => {
+          setServerError(
+            ctx.error.message ||
+              "We couldn't create your account. Please try again."
+          );
         },
       },
     });
@@ -85,17 +101,7 @@ export default function SignUpForm() {
       setServerError(
         error.message || "We couldn't create your account. Please try again."
       );
-      return;
     }
-
-    toast.add({
-      type: "success",
-      title: "Account created",
-      description: "Welcome to Creativo. Let's find your first studio.",
-    });
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (
@@ -105,16 +111,11 @@ export default function SignUpForm() {
         Create your account
       </h1>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        Book verified studios, host your own space, and manage everything in one
-        place.
+        Book verified studios, host your own space, and manage everything in one place.
       </p>
 
       <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="mt-8 space-y-5"
-          noValidate
-        >
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-5" noValidate>
           {serverError && (
             <div
               role="alert"
@@ -165,7 +166,6 @@ export default function SignUpForm() {
             )}
           />
 
-          {/* ৩. photoUrl ফিল্ডটি এখানে যোগ করা হলো */}
           <FormField
             control={form.control}
             name="photoUrl"
@@ -203,22 +203,15 @@ export default function SignUpForm() {
                   </FormControl>
                   <button
                     type="button"
-                    onClick={() => setShowPassword((visible) => !visible)}
-                    aria-label={
-                      showPassword ? "Hide password" : "Show password"
-                    }
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 transition-colors hover:text-gray-700 dark:hover:text-gray-200"
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Use at least 8 characters with a mix of letters, numbers and
-                  symbols.
+                  Use at least 8 characters with a mix of letters, numbers and symbols.
                 </p>
                 <FormMessage />
               </FormItem>
@@ -243,19 +236,11 @@ export default function SignUpForm() {
                   </FormControl>
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowConfirmPassword((visible) => !visible)
-                    }
-                    aria-label={
-                      showConfirmPassword ? "Hide password" : "Show password"
-                    }
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                     className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 transition-colors hover:text-gray-700 dark:hover:text-gray-200"
                   >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 <FormMessage />
@@ -270,25 +255,15 @@ export default function SignUpForm() {
               <FormItem className="space-y-2">
                 <div className="flex flex-row items-start gap-2.5">
                   <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      className="mt-0.5"
-                    />
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} className="mt-0.5" />
                   </FormControl>
                   <FormLabel className="cursor-pointer text-sm leading-snug font-normal text-gray-600 dark:text-gray-400">
                     I agree to the{" "}
-                    <Link
-                      href="/terms"
-                      className="font-medium text-[#8b5cf6] hover:underline"
-                    >
+                    <Link href="/terms" className="font-medium text-[#8b5cf6] hover:underline">
                       Terms of Service
                     </Link>{" "}
                     and{" "}
-                    <Link
-                      href="/privacy"
-                      className="font-medium text-[#8b5cf6] hover:underline"
-                    >
+                    <Link href="/privacy" className="font-medium text-[#8b5cf6] hover:underline">
                       Privacy Policy
                     </Link>
                     .
