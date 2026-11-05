@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; // 👈 নতুন ইম্পোর্ট
 import {
   AlertCircle,
   CalendarDays,
@@ -11,7 +12,7 @@ import {
   Loader2,
   RefreshCw,
   XCircle,
-  CheckCircle, // 👈 নতুন ইম্পোর্ট
+  CheckCircle,
 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
-import { useSession } from "@/lib/auth-client";
+import { useSession, getBearerToken } from "@/lib/auth-client";
 import {
   fetchMyBookings,
   formatBookingDate,
@@ -75,6 +76,7 @@ function BookingsSkeleton() {
 }
 
 export default function MyBookingsView() {
+  const router = useRouter(); // 👈 রাউটার ইনিশিয়ালাইজ
   const { data: session, isPending: sessionPending } = useSession();
   const email = session?.user?.email ?? "";
 
@@ -87,7 +89,7 @@ export default function MyBookingsView() {
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
-  // 👇 Confirm স্টেট
+  // Confirm স্টেট
   const [confirmTarget, setConfirmTarget] = useState<Booking | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -152,7 +154,7 @@ export default function MyBookingsView() {
     setConfirmError(null);
   };
 
-  // 👇 Confirm হ্যান্ডলার
+  // Confirm হ্যান্ডলার
   async function handleConfirmBooking() {
     if (!confirmTarget) return;
     setConfirming(true);
@@ -160,13 +162,17 @@ export default function MyBookingsView() {
 
     try {
       const baseUrl = getApiBaseUrl();
+      const token = await getBearerToken();
       const response = await fetch(
         `${baseUrl}/booking/${encodeURIComponent(confirmTarget.id)}/confirm`,
         {
           method: "PATCH",
           credentials: "include",
           cache: "no-store",
-          headers: { Accept: "application/json" },
+          headers: {
+            Accept: "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
         },
       );
 
@@ -193,6 +199,11 @@ export default function MyBookingsView() {
           b.id === confirmedId ? { ...b, status: "Confirmed" } : b,
         ),
       );
+
+      // 👇 ড্যাশবোর্ডের My Bookings পেজে রিডাইরেক্ট
+      router.push("/dashboard/my-bookings");
+      router.refresh();
+
     } catch (err) {
       const message =
         err instanceof Error
@@ -224,13 +235,17 @@ export default function MyBookingsView() {
 
     try {
       const baseUrl = getApiBaseUrl();
+      const token = await getBearerToken();
       const response = await fetch(
         `${baseUrl}/booking/${encodeURIComponent(booking.id)}/cancel`,
         {
           method: "PATCH",
           credentials: "include",
           cache: "no-store",
-          headers: { Accept: "application/json" },
+          headers: {
+            Accept: "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
         },
       );
 
@@ -392,7 +407,6 @@ export default function MyBookingsView() {
                     </p>
                   </div>
 
-                  {/* 👇 Confirm এবং Cancel বাটন */}
                   {booking.status === "Pending" && (
                     <div className="flex items-center gap-2">
                       <Button
@@ -504,7 +518,7 @@ export default function MyBookingsView() {
         </DialogContent>
       </Dialog>
 
-      {/* 👇 Confirm Dialog */}
+      {/* Confirm Dialog */}
       <Dialog
         open={confirmTarget !== null}
         onOpenChange={(nextOpen) => {

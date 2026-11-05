@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
-import { useSession } from "@/lib/auth-client";
+import { useSession, authClient } from "@/lib/auth-client"; // 👈 authClient ইম্পোর্ট করা হলো
 import {
   calculateHours,
   formatBookingDate,
@@ -32,7 +32,7 @@ import {
 type BookingDialogProps = {
   studioId: string;
   studioTitle: string;
-  studioImage: string; // 👈 নতুন যোগ করা হয়েছে
+  studioImage: string;
   hourlyRate: number;
 };
 
@@ -42,7 +42,7 @@ const inputClassName =
 export default function BookingDialog({
   studioId,
   studioTitle,
-  studioImage, // 👈 নতুন যোগ করা হয়েছে
+  studioImage,
   hourlyRate,
 }: BookingDialogProps) {
   const router = useRouter();
@@ -127,18 +127,24 @@ export default function BookingDialog({
     setSubmitting(true);
 
     try {
+      const { data: tokenData } = await authClient.token();
+      const token = tokenData?.token;
+
+      if (!token) {
+        throw new Error("Authentication token not found. Please log in again.");
+      }
+
       const response = await fetch(`${baseUrl}/booking`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        credentials: "include",
         body: JSON.stringify({
           studioId,
           studioTitle,
-          studioImage, // 👈 ইমেজটি ডাটাবেসে পাঠানো হচ্ছে
-          userEmail,
+          studioImage,
           date,
           startTime,
           endTime,

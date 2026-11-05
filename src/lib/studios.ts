@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "@/lib/booking";
+import { getBearerToken } from "@/lib/auth-client";
 import type { Studio } from "@/lib/types";
 
 export type StudioInput = {
@@ -97,13 +98,18 @@ export async function getMyStudios(
     throw new Error("Please sign in to manage your studios.");
   }
 
+  const token = await getBearerToken();
+
   const response = await fetch(
     `${baseUrl}/studio?ownerEmail=${encodeURIComponent(ownerEmail)}`,
     {
       method: "GET",
       credentials: "include",
       cache: "no-store",
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       signal,
     },
   );
@@ -149,6 +155,7 @@ export async function updateStudio(
   values: StudioInput,
 ): Promise<Studio | null> {
   const baseUrl = requireBaseUrl();
+  const token = await getBearerToken();
 
   const response = await fetch(studioUrl(baseUrl, id), {
     method: "PATCH",
@@ -157,6 +164,7 @@ export async function updateStudio(
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(values),
   });
@@ -174,12 +182,16 @@ export async function updateStudio(
 /** Permanently deletes a studio listing. */
 export async function deleteStudio(id: string): Promise<void> {
   const baseUrl = requireBaseUrl();
+  const token = await getBearerToken();
 
   const response = await fetch(studioUrl(baseUrl, id), {
     method: "DELETE",
     credentials: "include",
     cache: "no-store",
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
 
   if (!response.ok) {

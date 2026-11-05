@@ -119,136 +119,143 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
       ];
 
   return (
-    <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px]">
-      <div className="min-w-0">
-        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-gray-200 bg-slate-900 dark:border-white/5">
-          <Image
-            src={imageUrl}
-            alt={title}
-            className="h-full w-full object-cover"
-            width={800}
-            height={500}
-          />
-          <div className="absolute top-4 left-4 rounded-full border border-violet-500/30 bg-black/60 px-3 py-1.5 text-xs font-semibold text-violet-300 backdrop-blur-md">
-            {category}
-          </div>
-        </div>
-
-        <div className="mt-8">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-            <div className="flex items-center gap-1 rounded-md bg-gray-100 px-2.5 py-1 text-sm text-gray-800 dark:bg-white/5 dark:text-gray-300">
-              <Star className="h-3.5 w-3.5 fill-violet-500 text-violet-500" />
-              <span className="font-semibold">{rating}</span>
-              <span className="text-xs text-gray-500">({reviews} reviews)</span>
-            </div>
-
-            <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-              <MapPin className="h-4 w-4 text-violet-500" />
-              <span>{location}</span>
-            </div>
-
-            <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-              <Users className="h-4 w-4 text-violet-500" />
-              <span>Up to {maxCapacity} people</span>
+    <div className="mt-8">
+      {/* 👇 মূল গ্রিড (Amenities + Booking Card) */}
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px] items-start">
+        
+        {/* === বাম দিকের কন্টেন্ট === */}
+        <div className="min-w-0">
+          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-gray-200 bg-slate-900 dark:border-white/5">
+            <Image
+              src={imageUrl}
+              alt={title}
+              className="h-full w-full object-cover"
+              width={800}
+              height={500}
+            />
+            <div className="absolute top-4 left-4 rounded-full border border-violet-500/30 bg-black/60 px-3 py-1.5 text-xs font-semibold text-violet-300 backdrop-blur-md">
+              {category}
             </div>
           </div>
 
-          <h1 className="mt-4 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
-            {title}
-          </h1>
+          <div className="mt-8">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+              <div className="flex items-center gap-1 rounded-md bg-gray-100 px-2.5 py-1 text-sm text-gray-800 dark:bg-white/5 dark:text-gray-300">
+                <Star className="h-3.5 w-3.5 fill-violet-500 text-violet-500" />
+                <span className="font-semibold">{rating}</span>
+                <span className="text-xs text-gray-500">({reviews} reviews)</span>
+              </div>
 
-          <div className="mt-6 border-t border-gray-200 pt-6 dark:border-white/5">
-            <h2 className="mb-3 text-lg font-bold text-gray-900 dark:text-white">Space Overview</h2>
-            <p className="max-w-3xl text-base leading-relaxed text-gray-700 whitespace-pre-line dark:text-gray-300">
-              {overview}
-            </p>
-            <p className="mt-4 max-w-3xl text-sm leading-relaxed text-gray-500">
-              Listed under {category}. A certified Creativo production space in Riyadh.
-              The host provides a complete walkthrough on arrival, with 24/7 production concierge support.
-            </p>
-          </div>
-        </div>
+              <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
+                <MapPin className="h-4 w-4 text-violet-500" />
+                <span>{location}</span>
+              </div>
 
-        {amenities.length > 0 && (
-          <div className="mt-10 border-t border-gray-200 pt-8 dark:border-white/5">
-            <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">Included Amenities & Gear</h2>
-            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {amenities.map((amenity: string, idx: number) => (
-                <li
-                  key={idx}
-                  className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 dark:border-white/5 dark:bg-[#121212] dark:text-gray-300"
-                >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-500 dark:text-violet-400">
-                    <Check className="h-3.5 w-3.5" />
-                  </span>
-                  {amenity}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
+              <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
+                <Users className="h-4 w-4 text-violet-500" />
+                <span>Up to {maxCapacity} people</span>
+              </div>
+            </div>
 
-      <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-24 dark:border-white/5 dark:bg-[#121212]">
-        <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold text-gray-900 dark:text-white">{hourlyRate}</span>
-          <span className="text-xs font-semibold text-violet-500 dark:text-violet-400">SAR</span>
-          <span className="text-sm font-normal text-gray-500">/hr</span>
-        </div>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
+              {title}
+            </h1>
 
-        <dl className="mt-5 space-y-3 border-t border-gray-100 pt-5 text-sm dark:border-white/5">
-          <div className="flex items-center justify-between gap-4">
-            <dt className="text-gray-500 dark:text-gray-400">Max Capacity</dt>
-            <dd className="font-medium text-gray-900 dark:text-white">Up to {maxCapacity} people</dd>
+            <div className="mt-6 border-t border-gray-200 pt-6 dark:border-white/5">
+              <h2 className="mb-3 text-lg font-bold text-gray-900 dark:text-white">Space Overview</h2>
+              <p className="max-w-3xl text-base leading-relaxed text-gray-700 whitespace-pre-line dark:text-gray-300">
+                {overview}
+              </p>
+              <p className="mt-4 max-w-3xl text-sm leading-relaxed text-gray-500">
+                Listed under {category}. A certified Creativo production space in Riyadh.
+                The host provides a complete walkthrough on arrival, with 24/7 production concierge support.
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between gap-4">
-            <dt className="text-gray-500 dark:text-gray-400">Minimum Booking</dt>
-            <dd className="font-medium text-gray-900 dark:text-white">2 hours</dd>
-          </div>
-
-          {Number(securityDeposit) > 0 && (
-            <div className="flex items-center justify-between gap-4">
-              <dt className="text-gray-500 dark:text-gray-400">Security Deposit</dt>
-              <dd className="font-medium text-gray-900 dark:text-white">{securityDeposit} SAR (refundable)</dd>
+          {/* 👇 অ্যামেনিটিজ সেকশন (এটির নিচের বর্ডার লাইনটি শুধু বাম দিকের অংশ জুড়ে থাকবে) */}
+          {amenities.length > 0 && (
+            <div className="mt-10 border-t border-gray-200 pt-8 pb-4 dark:border-white/5">
+              <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">Included Amenities & Gear</h2>
+              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {amenities.map((amenity: string, idx: number) => (
+                  <li
+                    key={idx}
+                    className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 dark:border-white/5 dark:bg-[#121212] dark:text-gray-300"
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-500 dark:text-violet-400">
+                      <Check className="h-3.5 w-3.5" />
+                    </span>
+                    {amenity}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
-
-          <div className="flex items-center justify-between gap-4">
-            <dt className="text-gray-500 dark:text-gray-400">Location</dt>
-            <dd className="max-w-[170px] truncate text-right font-medium text-gray-900 dark:text-white" title={location}>
-              {location}
-            </dd>
-          </div>
-
-          <div className="flex items-center justify-between gap-4">
-            <dt className="text-gray-500 dark:text-gray-400">Host Response</dt>
-            <dd className="font-medium text-gray-900 dark:text-white">Within 1 hour</dd>
-          </div>
-        </dl>
-
-        {/* 👇 এখানে studioImage প্রপটি যোগ করা হয়েছে */}
-        <BookingDialog
-          studioId={String(studio._id || studio.id || id)}
-          studioTitle={title}
-          studioImage={imageUrl}
-          hourlyRate={Number(hourlyRate) || 0}
-        />
-
-        <p className="mt-3 text-center text-xs text-gray-500">
-          No charge until your host confirms the reservation.
-        </p>
-
-        <div className="mt-6 flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-white/5 dark:bg-[#0a0a0a]">
-          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-violet-500 dark:text-violet-400" />
-          <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
-            Every Creativo booking includes comprehensive liability protection and 24/7 production support in Riyadh.
-          </p>
         </div>
-      </aside>
 
+        {/* === ডান দিকের বুকিং কার্ড === */}
+        <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-24 dark:border-white/5 dark:bg-[#121212]">
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-bold text-violet-500 dark:text-violet-400">৳</span>
+            <span className="text-3xl font-bold text-gray-900 dark:text-white">{hourlyRate}</span>
+            <span className="text-sm font-normal text-gray-500">/hr</span>
+          </div>
+
+          <dl className="mt-5 space-y-3 border-t border-gray-100 pt-5 text-sm dark:border-white/5">
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-gray-500 dark:text-gray-400">Max Capacity</dt>
+              <dd className="font-medium text-gray-900 dark:text-white">Up to {maxCapacity} people</dd>
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-gray-500 dark:text-gray-400">Minimum Booking</dt>
+              <dd className="font-medium text-gray-900 dark:text-white">2 hours</dd>
+            </div>
+
+            {Number(securityDeposit) > 0 && (
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-gray-500 dark:text-gray-400">Security Deposit</dt>
+                <dd className="font-medium text-gray-900 dark:text-white">৳ {securityDeposit} (refundable)</dd>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-gray-500 dark:text-gray-400">Location</dt>
+              <dd className="max-w-[170px] truncate text-right font-medium text-gray-900 dark:text-white" title={location}>
+                {location}
+              </dd>
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-gray-500 dark:text-gray-400">Host Response</dt>
+              <dd className="font-medium text-gray-900 dark:text-white">Within 1 hour</dd>
+            </div>
+          </dl>
+
+          <BookingDialog
+            studioId={String(studio._id || studio.id || id)}
+            studioTitle={title}
+            studioImage={imageUrl}
+            hourlyRate={Number(hourlyRate) || 0}
+          />
+
+          <p className="mt-3 text-center text-xs text-gray-500">
+            No charge until your host confirms the reservation.
+          </p>
+
+          <div className="mt-6 flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-white/5 dark:bg-[#0a0a0a]">
+            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-violet-500 dark:text-violet-400" />
+            <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
+              Every Creativo booking includes comprehensive liability protection and 24/7 production support in Riyadh.
+            </p>
+          </div>
+        </aside>
+      </div>
+
+      {/* === Similar Studios (এটি এখন পুরো গ্রিডের নিচে থাকবে) === */}
       {similarStudios.length > 0 && (
-        <div className="col-span-full mt-16 border-t border-gray-200 pt-14 dark:border-white/5">
+        <div className="mt-16 border-t border-gray-200 pt-14 dark:border-white/5">
           <div className="mb-8">
             <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Similar Studios</h2>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">More verified creative spaces that match this style.</p>
@@ -264,9 +271,9 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
                   <Image
                     src={similar.imageUrl || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04"}
                     alt={similar.title || "Studio Image"}
-                    fill // 👈 এই লাইনটি যোগ করো
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // 👈 এই লাইনটি যোগ করো
-                    className="object-cover transition-transform duration-500 group-hover:scale-105" // h-full w-full বাদ দেওয়া হয়েছে
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute top-3 right-3 rounded-full border border-violet-500/30 bg-black/60 px-3 py-1 text-xs font-semibold text-violet-300 backdrop-blur-md">
                     {similar.category || "Studio"}
@@ -291,8 +298,8 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
 
                   <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-4 dark:border-white/5">
                     <div className="flex items-baseline gap-1 font-bold text-gray-900 dark:text-white">
+                      <span className="text-violet-500 dark:text-violet-400">৳</span>
                       <span>{similar.hourlyRate || "0"}</span>
-                      <span className="text-xs font-semibold text-violet-500 dark:text-violet-400">SAR</span>
                       <span className="text-sm font-normal text-gray-500">/hr</span>
                     </div>
                     <Link

@@ -1,6 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cn } from "cn";
-import { DollarSign, MapPin, Star, Users } from "lucide-react";
+import { MapPin, Star, Users } from "lucide-react"; // 👈 DollarSign রিমুভ করা হয়েছে
 
 import type { Studio } from "@/lib/types";
 
@@ -26,10 +27,13 @@ export default function StudioCard({ studio, href, className }: StudioCardProps)
     >
       {/* Media */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-900">
-        <img
+        <Image
           src={image}
           alt={studio.title || "Studio"}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          fill
+          unoptimized
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/10" />
 
@@ -70,8 +74,9 @@ export default function StudioCard({ studio, href, className }: StudioCardProps)
 
         <div className="mt-auto flex items-end justify-between gap-4 border-t border-gray-100 pt-4 dark:border-white/5">
           <div className="flex items-baseline gap-1">
+            {/* 👇 ডলার আইকনের জায়গায় টাকার সিম্বল */}
+            <span className="text-xl font-bold text-gray-900 dark:text-white">৳</span>
             <span className="text-2xl font-bold text-gray-900 dark:text-white">{price}</span>
-            <span className="text-xs font-semibold text-violet-500 dark:text-violet-400"><DollarSign /></span>
             <span className="text-sm text-gray-500">/hr</span>
           </div>
 

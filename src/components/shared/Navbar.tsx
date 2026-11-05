@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore, type MouseEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -206,9 +207,12 @@ export default function Navbar() {
               >
                 <div className="h-9 w-9 overflow-hidden rounded-full ring-2 ring-[#8b5cf6] ring-offset-2 ring-offset-white dark:ring-offset-[#0a0a0a]">
                   {userImage && !imgError ? (
-                    <img
+                    <Image
                       src={userImage}
                       alt={userName}
+                      width={36}
+                      height={36}
+                      unoptimized
                       className="h-full w-full object-cover"
                       onError={() => setImgError(true)}
                     />

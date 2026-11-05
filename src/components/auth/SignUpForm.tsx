@@ -74,7 +74,7 @@ export default function SignUpForm() {
         provider: "google",
         callbackURL: "/", // সফল হলে হোম পেজে যাবে
       });
-    } catch (error) {
+    } catch {
       toast.add({
         type: "error",
         title: "Google Sign-up Failed",

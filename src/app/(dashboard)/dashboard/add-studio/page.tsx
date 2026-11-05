@@ -8,10 +8,10 @@ import {
   AlertCircle,
   Loader2,
   MapPin,
-  DollarSign,
   Users,
   Image as ImageIcon,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/toast";
-import { useSession } from "@/lib/auth-client";
+import { getBearerToken, useSession } from "@/lib/auth-client";
 import { getStudioById } from "@/lib/studios";
 
 // --- Zod Schema for Validation ---
@@ -40,7 +40,7 @@ const formSchema = z.object({
 });
 
 const PRESET_IMAGES = [
-  { id: "1", url: "/src/assets/images/hero_cyclorama_studio_1793552711863.jpg", label: "Daylight Cyc" },
+  { id: "1", url: "https://images.unsplash.com/photo-1598899134739-24c46f58b8c0", label: "Daylight Cyc" },
   { id: "2", url: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04", label: "Sound Stage" },
   { id: "3", url: "https://images.unsplash.com/photo-1593697821252-0c9137d9fc45", label: "Podcast Suite" },
   { id: "4", url: "https://images.unsplash.com/photo-1516280440502-863a346513c6", label: "Music Suite" },
@@ -186,6 +186,8 @@ function StudioForm() {
           ? `${baseUrl}/studio/${encodeURIComponent(editId)}`
           : `${baseUrl}/studio`;
 
+      const token = await getBearerToken();
+
       const result = await fetch(endpoint, {
         method: isEdit ? "PATCH" : "POST",
         credentials: "include",
@@ -193,9 +195,19 @@ function StudioForm() {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(payload),
       });
+
+      if (result.status === 401) {
+        toast.add({
+          type: "error",
+          title: "Session expired",
+          description: "Session expired. Please sign in again.",
+        });
+        return;
+      }
 
       if (!result.ok) {
         const data = await result.json().catch(() => null);
@@ -259,7 +271,8 @@ function StudioForm() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground py-12 px-4">
+    // 👇 min-h-screen এবং overflow-x-hidden যোগ করা হয়েছে স্ক্রল ঠিক রাখতে
+    <div className="min-h-screen w-full overflow-x-hidden bg-background text-foreground py-12 px-4">
       <div className="max-w-4xl mx-auto space-y-6">
 
         <div>
@@ -297,7 +310,8 @@ function StudioForm() {
                 <FormField control={form.control} name="category" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || null}>
+                    {/* 👇 value={field.value || undefined} করা হয়েছে যাতে স্ক্রল লক না হয় */}
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger className="bg-background border-input">
                           <SelectValue placeholder="Select a category" />
@@ -352,11 +366,11 @@ function StudioForm() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FormField control={form.control} name="hourlyRate" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hourly Rate (SAR) *</FormLabel>
+                    <FormLabel>Hourly Rate (TK) *</FormLabel>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <span className="absolute left-3 top-2.5 text-muted-foreground font-semibold">৳</span>
                       <FormControl>
-                        <Input type="number" placeholder="120" className="pl-9 bg-background border-input" {...field} />
+                        <Input type="number" placeholder="1200" className="pl-8 bg-background border-input" {...field} />
                       </FormControl>
                     </div>
                     <FormMessage />
@@ -365,11 +379,11 @@ function StudioForm() {
 
                 <FormField control={form.control} name="securityDeposit" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Security Deposit (SAR) *</FormLabel>
+                    <FormLabel>Security Deposit (TK) *</FormLabel>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <span className="absolute left-3 top-2.5 text-muted-foreground font-semibold">৳</span>
                       <FormControl>
-                        <Input type="number" placeholder="250" className="pl-9 bg-background border-input" {...field} />
+                        <Input type="number" placeholder="2500" className="pl-8 bg-background border-input" {...field} />
                       </FormControl>
                     </div>
                     <FormMessage />
@@ -404,7 +418,7 @@ function StudioForm() {
                   <div className="relative">
                     <ImageIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <FormControl>
-                      <Input placeholder="/src/assets/images/hero_cyclorama_studio...jpg" className="pl-9 bg-background border-input" {...field} />
+                      <Input placeholder="https://example.com/studio-image.jpg" className="pl-9 bg-background border-input" {...field} />
                     </FormControl>
                   </div>
                   <FormMessage />
@@ -423,7 +437,14 @@ function StudioForm() {
                         imageUrl === img.url ? "border-violet-500 ring-2 ring-violet-500/20" : "border-border hover:border-muted-foreground"
                       }`}
                     >
-                      <img src={img.url} alt={img.label} className="w-full h-24 object-cover opacity-80 hover:opacity-100 transition-opacity" />
+                      <Image
+                        src={img.url}
+                        alt={img.label}
+                        width={400}
+                        height={96}
+                        unoptimized
+                        className="w-full h-24 object-cover opacity-80 hover:opacity-100 transition-opacity"
+                      />
                       <div className="absolute bottom-0 w-full bg-background/80 text-xs py-1.5 text-center text-foreground">
                         {img.label}
                       </div>
