@@ -97,6 +97,7 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
   const similarStudios = await getSimilarStudios(studio._id || studio.id || id);
 
   const imageUrl = studio.imageUrl || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04";
+  const images = Array.isArray((studio as any).images) ? (studio as any).images : [imageUrl];
   const title = studio.title || "Untitled Studio";
   const category = studio.category || "Studio";
   
@@ -128,14 +129,15 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
         
         <div className="min-w-0">
           <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-gray-200 bg-slate-900 dark:border-white/5">
-            <ClientImage
-              src={imageUrl}
-              alt={title}
-              unoptimized
-              className="h-full w-full object-cover"
-              width={800}
-              height={500}
-            />
+            {images.length > 1 ? (
+              <div className="flex h-full w-full overflow-x-auto snap-x snap-mandatory">
+                {images.map((img: string, i: number) => (
+                  <ClientImage key={i} src={img} alt={title} unoptimized className="h-full min-w-[100vw] shrink-0 snap-center object-cover" width={800} height={500} />
+                ))}
+              </div>
+            ) : (
+              <ClientImage src={imageUrl} alt={title} unoptimized className="h-full w-full object-cover" width={800} height={500} />
+            )}
             <div className="absolute top-4 left-4 rounded-full border border-violet-500/30 bg-black/60 px-3 py-1.5 text-xs font-semibold text-violet-300 backdrop-blur-md">
               {category}
             </div>

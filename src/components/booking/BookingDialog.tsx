@@ -136,6 +136,7 @@ export default function BookingDialog({
 
       const response = await fetch(`${baseUrl}/booking`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
