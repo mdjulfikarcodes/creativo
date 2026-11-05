@@ -37,19 +37,33 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "i.ibb.co", // ImgBB এর জন্য
+        hostname: "i.ibb.co", // ImgBB
         port: "",
         pathname: "/**",
       },
       {
         protocol: "https",
-        hostname: "encrypted-tbn0.gstatic.com", // ✅ Google এর ছবির জন্য
+        hostname: "encrypted-tbn0.gstatic.com",
         port: "",
         pathname: "/**",
       },
       {
         protocol: "https",
-        hostname: "lh3.googleusercontent.com", // ✅ Google ইউজার প্রোফাইল ছবির জন্য
+        hostname: "lh3.googleusercontent.com",
+        port: "",
+        pathname: "/**",
+      },
+      // 👇 ১. shorturl.at যুক্ত করা হলো (আপনার এররের জন্য)
+      {
+        protocol: "https",
+        hostname: "shorturl.at",
+        port: "",
+        pathname: "/**",
+      },
+      // 👇 ২. বিকল্প হিসেবে যেকোনো হোস্ট থেকে ইমেজ লোড করার অনুমতি (ভবিষ্যতের জন্য)
+      {
+        protocol: "https",
+        hostname: "**", // যেকোনো ওয়েবসাইট থেকে ইমেজ লোড করবে
         port: "",
         pathname: "/**",
       },

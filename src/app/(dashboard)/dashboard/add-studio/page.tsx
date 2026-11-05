@@ -24,7 +24,6 @@ import { toast } from "@/components/ui/toast";
 import { getBearerToken, useSession } from "@/lib/auth-client";
 import { getStudioById } from "@/lib/studios";
 
-// --- Zod Schema for Validation ---
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
   category: z.string().min(1, "Please select a category"),
@@ -40,10 +39,11 @@ const formSchema = z.object({
 });
 
 const PRESET_IMAGES = [
-  { id: "1", url: "https://images.unsplash.com/photo-1598899134739-24c46f58b8c0", label: "Daylight Cyc" },
-  { id: "2", url: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04", label: "Sound Stage" },
-  { id: "3", url: "https://images.unsplash.com/photo-1593697821252-0c9137d9fc45", label: "Podcast Suite" },
-  { id: "4", url: "https://images.unsplash.com/photo-1516280440502-863a346513c6", label: "Music Suite" },
+  { id: "1", url: "https://shorturl.at/Glqbv", label: "Photo Studio" },
+  { id: "2", url: "https://shorturl.at/pCgE6", label: "Sound Stage" },
+  { id: "3", url: "https://shorturl.at/tc6jA", label: "Podcast Suite" },
+  { id: "4", url: "https://shorturl.at/SdXFe", label: "Music Suite" },
+  { id: "5", url: "https://shorturl.at/HHm77", label: "Art Workshops" },
 ];
 
 export default function AddStudioPage() {
@@ -91,6 +91,14 @@ function StudioForm() {
 
   const imageUrl = useWatch({ control: form.control, name: "imageUrl" });
 
+  // 👇 ১. স্ক্রল ফিক্স (ফোর্সফুলি body overflow রিসেট)
+  useEffect(() => {
+    document.body.style.overflow = "auto";
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, []);
+
   useEffect(() => {
     if (!editId) return;
 
@@ -108,10 +116,7 @@ function StudioForm() {
         const amenities = Array.isArray(studio.amenities)
           ? studio.amenities
           : typeof studio.amenities === "string"
-            ? studio.amenities
-                .split(",")
-                .map((item) => item.trim())
-                .filter(Boolean)
+            ? studio.amenities.split(",").map((item) => item.trim()).filter(Boolean)
             : [];
 
         const toFieldValue = (value: unknown) =>
@@ -131,9 +136,7 @@ function StudioForm() {
       })
       .catch((err: unknown) => {
         if (!active) return;
-        setLoadError(
-          err instanceof Error ? err.message : "Failed to load this studio.",
-        );
+        setLoadError(err instanceof Error ? err.message : "Failed to load this studio.");
       })
       .finally(() => {
         if (active) setLoadingStudio(false);
@@ -155,17 +158,10 @@ function StudioForm() {
   ];
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const baseUrl = (process.env.NEXT_PUBLIC_SERVER_BASE_URL ?? "").replace(
-      /\/+$/,
-      "",
-    );
+    const baseUrl = (process.env.NEXT_PUBLIC_SERVER_BASE_URL ?? "").replace(/\/+$/, "");
 
     if (!baseUrl) {
-      toast.add({
-        type: "error",
-        title: "Studio API is not configured",
-        description: "Set NEXT_PUBLIC_SERVER_BASE_URL in .env.local.",
-      });
+      toast.add({ type: "error", title: "Studio API is not configured", description: "Set NEXT_PUBLIC_SERVER_BASE_URL in .env.local." });
       return;
     }
 
@@ -181,11 +177,7 @@ function StudioForm() {
         ...(hostName ? { hostName } : {}),
       };
 
-      const endpoint =
-        isEdit && editId
-          ? `${baseUrl}/studio/${encodeURIComponent(editId)}`
-          : `${baseUrl}/studio`;
-
+      const endpoint = isEdit && editId ? `${baseUrl}/studio/${encodeURIComponent(editId)}` : `${baseUrl}/studio`;
       const token = await getBearerToken();
 
       const result = await fetch(endpoint, {
@@ -201,31 +193,19 @@ function StudioForm() {
       });
 
       if (result.status === 401) {
-        toast.add({
-          type: "error",
-          title: "Session expired",
-          description: "Session expired. Please sign in again.",
-        });
+        toast.add({ type: "error", title: "Session expired", description: "Session expired. Please sign in again." });
         return;
       }
 
       if (!result.ok) {
         const data = await result.json().catch(() => null);
-        throw new Error(
-          typeof data?.message === "string"
-            ? data.message
-            : isEdit
-              ? "Failed to update studio."
-              : "Failed to publish studio."
-        );
+        throw new Error(typeof data?.message === "string" ? data.message : isEdit ? "Failed to update studio." : "Failed to publish studio.");
       }
 
       toast.add({
         type: "success",
         title: isEdit ? "Studio updated" : "Studio published",
-        description: isEdit
-          ? "Your studio listing has been updated successfully."
-          : "Your studio listing has been created successfully.",
+        description: isEdit ? "Your studio listing has been updated successfully." : "Your studio listing has been created successfully.",
       });
       router.push("/dashboard/my-studio");
       router.refresh();
@@ -233,8 +213,7 @@ function StudioForm() {
       toast.add({
         type: "error",
         title: isEdit ? "Could not update studio" : "Could not publish studio",
-        description:
-          error instanceof Error ? error.message : "Please try again.",
+        description: error instanceof Error ? error.message : "Please try again.",
       });
     } finally {
       setSubmitting(false);
@@ -257,12 +236,7 @@ function StudioForm() {
             <AlertCircle className="h-5 w-5 shrink-0" />
             <p className="text-sm">{loadError}</p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push("/dashboard/my-studio")}
-            className="h-9 border-rose-500/30 bg-transparent text-rose-600 hover:bg-rose-500/15 dark:text-rose-200 dark:hover:text-white"
-          >
+          <Button type="button" variant="outline" onClick={() => router.push("/dashboard/my-studio")} className="h-9 border-rose-500/30 bg-transparent text-rose-600 hover:bg-rose-500/15 dark:text-rose-200 dark:hover:text-white">
             Back to My Studio
           </Button>
         </div>
@@ -271,8 +245,8 @@ function StudioForm() {
   }
 
   return (
-    // 👇 min-h-screen এবং overflow-x-hidden যোগ করা হয়েছে স্ক্রল ঠিক রাখতে
-    <div className="min-h-screen w-full overflow-x-hidden bg-background text-foreground py-12 px-4">
+    // 👇 ২. পেজের মেইন কন্টেইনারে overflow-hidden নেই, নিশ্চিত করুন
+    <div className="min-h-screen bg-background text-foreground py-12 px-4 relative">
       <div className="max-w-4xl mx-auto space-y-6">
 
         <div>
@@ -299,9 +273,9 @@ function StudioForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name="title" render={({ field }) => (
                   <FormItem className="col-span-1 md:col-span-2">
-                    <FormLabel>Studio Title *</FormLabel>
+                    <FormLabel>Studio Title :</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Apex Industrial Daylight Loft & Cyclorama" className="bg-background border-input" {...field} />
+                      <Input placeholder="Enter Your Title" className="bg-background border-input" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -309,8 +283,8 @@ function StudioForm() {
 
                 <FormField control={form.control} name="category" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category *</FormLabel>
-                    {/* 👇 value={field.value || undefined} করা হয়েছে যাতে স্ক্রল লক না হয় */}
+                    <FormLabel>Category :</FormLabel>
+                    {/* 👇 ৩. Select-এ undefined দেওয়া হলো */}
                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger className="bg-background border-input">
@@ -321,6 +295,8 @@ function StudioForm() {
                         <SelectItem value="Photo Studios">Photo Studios</SelectItem>
                         <SelectItem value="Sound Stages">Sound Stages</SelectItem>
                         <SelectItem value="Podcast Rooms">Podcast Rooms</SelectItem>
+                        <SelectItem value="Music Suites">Music Suites</SelectItem>
+                        <SelectItem value="Art Workshops">Art Workshops</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -329,11 +305,11 @@ function StudioForm() {
 
                 <FormField control={form.control} name="location" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location (District, Riyadh) *</FormLabel>
+                    <FormLabel>Location (District, City) :</FormLabel>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <FormControl>
-                        <Input placeholder="e.g. Jax District, Diriyah, Riyadh" className="pl-9 bg-background border-input" {...field} />
+                        <Input placeholder="Location" className="pl-9 bg-background border-input" {...field} />
                       </FormControl>
                     </div>
                     <FormMessage />
@@ -342,10 +318,10 @@ function StudioForm() {
 
                 <FormField control={form.control} name="overview" render={({ field }) => (
                   <FormItem className="col-span-1 md:col-span-2">
-                    <FormLabel>Detailed Workspace Overview *</FormLabel>
+                    <FormLabel>Detailed Workspace Overview :</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Describe the ceiling height, daylight orientation, electric panel capacity (e.g. 200A 3-phase), sound isolation level, and suitable production types..." 
+                        placeholder="Describe your studio, lighting, equipment, amenities, and ideal use." 
                         className="min-h-[120px] bg-background border-input resize-none" 
                         {...field} 
                       />
@@ -366,11 +342,11 @@ function StudioForm() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FormField control={form.control} name="hourlyRate" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hourly Rate (TK) *</FormLabel>
+                    <FormLabel>Hourly Rate (TK) :</FormLabel>
                     <div className="relative">
                       <span className="absolute left-3 top-2.5 text-muted-foreground font-semibold">৳</span>
                       <FormControl>
-                        <Input type="number" placeholder="1200" className="pl-8 bg-background border-input" {...field} />
+                        <Input type="number" placeholder="1000" className="pl-8 bg-background border-input" {...field} />
                       </FormControl>
                     </div>
                     <FormMessage />
@@ -379,11 +355,11 @@ function StudioForm() {
 
                 <FormField control={form.control} name="securityDeposit" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Security Deposit (TK) *</FormLabel>
+                    <FormLabel>Security Deposit (TK) :</FormLabel>
                     <div className="relative">
                       <span className="absolute left-3 top-2.5 text-muted-foreground font-semibold">৳</span>
                       <FormControl>
-                        <Input type="number" placeholder="2500" className="pl-8 bg-background border-input" {...field} />
+                        <Input type="number" placeholder="2000" className="pl-8 bg-background border-input" {...field} />
                       </FormControl>
                     </div>
                     <FormMessage />
@@ -392,11 +368,11 @@ function StudioForm() {
 
                 <FormField control={form.control} name="maxCapacity" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Max Capacity (People) *</FormLabel>
+                    <FormLabel>Max Capacity (People) :</FormLabel>
                     <div className="relative">
                       <Users className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <FormControl>
-                        <Input type="number" placeholder="15" className="pl-9 bg-background border-input" {...field} />
+                        <Input type="number" placeholder="10" className="pl-9 bg-background border-input" {...field} />
                       </FormControl>
                     </div>
                     <FormMessage />
@@ -414,11 +390,11 @@ function StudioForm() {
 
               <FormField control={form.control} name="imageUrl" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL (Direct link or ImgBB) *</FormLabel>
+                  <FormLabel>Image URL (Direct link or ImgBB) :</FormLabel>
                   <div className="relative">
                     <ImageIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <FormControl>
-                      <Input placeholder="https://example.com/studio-image.jpg" className="pl-9 bg-background border-input" {...field} />
+                      <Input placeholder="Image Url" className="pl-9 bg-background border-input" {...field} />
                     </FormControl>
                   </div>
                   <FormMessage />
@@ -426,8 +402,8 @@ function StudioForm() {
               )} />
 
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-3">Or pick a production photo preset:</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <p className="text-sm font-medium text-muted-foreground mb-3">Or pick a production photo preset :</p>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   {PRESET_IMAGES.map((img) => (
                     <button
                       key={img.id}

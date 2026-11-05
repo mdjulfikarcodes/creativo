@@ -47,7 +47,7 @@ export const bookingSteps: Step[] = [
 
 export const guarantees: Guarantee[] = [
   {
-    title: "SAR 3.5M Liability Protection",
+    title: "BDT 3.5M Liability Protection",
     description:
       "Every reservation is safeguarded against property damage and third-party liabilities at no extra charge.",
     icon: ShieldCheck,

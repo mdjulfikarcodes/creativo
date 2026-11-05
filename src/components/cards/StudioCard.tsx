@@ -1,4 +1,4 @@
-import Image from "next/image";
+import ClientImage from "@/components/shared/ClientImage";
 import Link from "next/link";
 import { cn } from "cn";
 import { MapPin, Star, Users } from "lucide-react"; // 👈 DollarSign রিমুভ করা হয়েছে
@@ -27,7 +27,7 @@ export default function StudioCard({ studio, href, className }: StudioCardProps)
     >
       {/* Media */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-900">
-        <Image
+        <ClientImage
           src={image}
           alt={studio.title || "Studio"}
           fill

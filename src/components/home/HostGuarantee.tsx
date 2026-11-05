@@ -32,7 +32,7 @@ export default function HostGuarantee() {
               Have an empty studio or creative workspace?
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-violet-100 sm:text-base">
-              List your space on Creativo to earn up to SAR 32,000/month hosting
+              List your space on Creativo to earn up to BDT 32,000/month hosting
               commercial photo shoots, music sessions, and creative productions.
             </p>
           </div>

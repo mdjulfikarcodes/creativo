@@ -1,7 +1,7 @@
 const FALLBACK_STUDIO_IMAGE =
   "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=800&auto=format&fit=crop";
 
-export type BookingStatus = "Pending" | "Confirmed" | "Cancelled";
+export type BookingStatus = "Pending" | "Confirmed" | "Cancelled" | "Completed";
 
 export type Booking = {
   id: string;
@@ -13,6 +13,7 @@ export type Booking = {
   endTime: string;
   totalPrice: number;
   status: BookingStatus;
+  review?: { rating: number; comment: string };
 };
 
 /** Base URL for the Express API, without a trailing slash. */

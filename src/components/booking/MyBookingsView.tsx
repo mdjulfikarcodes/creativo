@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
+import { Textarea } from "@/components/ui/textarea";
 import { useSession, getBearerToken } from "@/lib/auth-client";
 import {
   fetchMyBookings,
@@ -41,6 +42,7 @@ const STATUS_STYLES: Record<BookingStatus, string> = {
   Pending: "border-amber-500/30 bg-amber-500/10 text-amber-500 dark:text-amber-300",
   Confirmed: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
   Cancelled: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-300",
+  Completed: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
 };
 
 function StatusBadge({ status }: { status: BookingStatus }) {
@@ -93,6 +95,12 @@ export default function MyBookingsView() {
   const [confirmTarget, setConfirmTarget] = useState<Booking | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+
+  // Review 상태
+  const [reviewTarget, setReviewTarget] = useState<Booking | null>(null);
+  const [reviewRating, setReviewRating] = useState("5");
+  const [reviewComment, setReviewComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchBookings = useCallback(async () => {
     if (!email) {
@@ -218,6 +226,49 @@ export default function MyBookingsView() {
       });
     } finally {
       setConfirming(false);
+    }
+  }
+
+  async function handleSubmitReview() {
+    if (!reviewTarget) return;
+    setSubmitting(true);
+    try {
+      const token = await getBearerToken();
+      const res = await fetch(
+        `${getApiBaseUrl()}/booking/${encodeURIComponent(reviewTarget.id)}/review`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            rating: Number(reviewRating),
+            comment: reviewComment,
+          }),
+        },
+      );
+      if (!res.ok) throw new Error("Failed to submit review");
+
+      toast.add({
+        type: "success",
+        title: "Review submitted",
+        description: "Thank you for your feedback!",
+      });
+
+      setReviewTarget(null);
+      setReviewRating("5");
+      setReviewComment("");
+      refreshBookings();
+    } catch (err) {
+      toast.add({
+        type: "error",
+        title: "Review failed",
+        description: err instanceof Error ? err.message : "",
+      });
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -392,6 +443,14 @@ export default function MyBookingsView() {
                       {formatBookingTimeRange(booking)}
                     </span>
                   </div>
+                  {booking.review && (
+                    <div className="text-sm">
+                      {[...Array(booking.review.rating)]
+                        .map(() => "★")
+                        .join(" ")}
+                      {booking.review.comment}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col items-start gap-4 border-t border-gray-200 pt-4 dark:border-white/5 sm:items-end sm:border-t-0 sm:border-l sm:pt-0 sm:pl-5">
@@ -402,7 +461,7 @@ export default function MyBookingsView() {
                     <p className="flex items-baseline gap-1 text-xl font-bold text-gray-900 dark:text-white sm:justify-end">
                       {formatPrice(booking.totalPrice)}
                       <span className="text-xs font-semibold text-violet-500 dark:text-violet-400">
-                        SAR
+                        BDT
                       </span>
                     </p>
                   </div>
@@ -433,6 +492,15 @@ export default function MyBookingsView() {
                         Cancel
                       </Button>
                     </div>
+                  )}
+                  {booking.status === "Completed" && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setReviewTarget(booking)}
+                    >
+                      Leave a Review
+                    </Button>
                   )}
                 </div>
               </div>
@@ -567,6 +635,72 @@ export default function MyBookingsView() {
                 <>
                   <CheckCircle className="h-4 w-4" />
                   Confirm Booking
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Review Dialog */}
+      <Dialog
+        open={reviewTarget !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setReviewTarget(null);
+        }}
+      >
+        <DialogContent className="border border-gray-200 bg-white text-gray-900 dark:border-white/10 dark:bg-[#121212] dark:text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">
+              Write a Review
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex gap-2 mb-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Button
+                key={i}
+                size="sm"
+                variant={
+                  reviewRating === String(i) ? "default" : "outline"
+                }
+                onClick={() => setReviewRating(String(i))}
+              >
+                {i}
+              </Button>
+            ))}
+          </div>
+
+          <Textarea
+            value={reviewComment}
+            onChange={(e) => setReviewComment(e.target.value)}
+            placeholder="Add a comment"
+            className="mb-4"
+          />
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setReviewTarget(null)}
+              className="h-10 border-gray-200 bg-transparent text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={submitting}
+              onClick={() => void handleSubmitReview()}
+              className="h-10 gap-2 bg-violet-600 text-white hover:bg-violet-700"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  Submit Review
                 </>
               )}
             </Button>

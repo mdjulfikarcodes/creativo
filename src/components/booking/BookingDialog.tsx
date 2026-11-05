@@ -157,8 +157,8 @@ export default function BookingDialog({
         setError(null);
         toast.add({
           type: "error",
-          title: "Time slot already booked",
-          description: "Please choose a different date or time.",
+          title: "This time slot is already booked.",
+          description: "Please choose another time.",
         });
         return;
       }
@@ -189,7 +189,8 @@ export default function BookingDialog({
       });
 
       setOpen(false);
-      router.push("/my-bookings");
+      router.push("/dashboard/my-bookings");
+      router.refresh();
     } catch (err) {
       const message =
         err instanceof Error
@@ -227,7 +228,7 @@ export default function BookingDialog({
             <DialogDescription className="text-sm text-gray-400">
               {studioTitle} ·{" "}
               <span className="font-medium text-violet-400">
-                {formatPrice(hourlyRate)} SAR/hr
+                {formatPrice(hourlyRate)} BDT/hr
               </span>
             </DialogDescription>
           </DialogHeader>
@@ -305,7 +306,7 @@ export default function BookingDialog({
               <div className="mt-2 flex items-center justify-between text-sm">
                 <span className="text-gray-400">Hourly rate</span>
                 <span className="font-medium text-white">
-                  {formatPrice(hourlyRate)} SAR
+                  {formatPrice(hourlyRate)} BDT
                 </span>
               </div>
               <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
@@ -314,7 +315,7 @@ export default function BookingDialog({
                 </span>
                 <span className="text-lg font-bold text-violet-300">
                   {formatPrice(totalPrice)}{" "}
-                  <span className="text-xs font-semibold">SAR</span>
+                  <span className="text-xs font-semibold">BDT</span>
                 </span>
               </div>
             </div>

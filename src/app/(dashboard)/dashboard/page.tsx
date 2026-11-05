@@ -47,6 +47,7 @@ const STATUS_STYLES: Record<BookingStatus, string> = {
   Confirmed:
     "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
   Cancelled: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-300",
+  Completed: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
 };
 
 function StatusBadge({ status }: { status: BookingStatus }) {
@@ -153,7 +154,7 @@ export default function DashboardOverviewPage() {
     },
     {
       title: "Total Revenue",
-      value: `${formatPrice(stats.revenue)} SAR`,
+      value: `${formatPrice(stats.revenue)} BDT`,
       icon: TrendingUp,
       color: "text-blue-500 dark:text-blue-400",
       bg: "bg-blue-500/10",

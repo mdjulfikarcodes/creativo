@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Check, MapPin, Star, Users, ShieldCheck } from "lucide-react";
-import Image from "next/image";
+import ClientImage from "@/components/shared/ClientImage";
 import BookingDialog from "@/components/booking/BookingDialog";
 import { extractStudio, parseStudioList } from "@/lib/studios";
 import type { Studio } from "@/lib/types";
@@ -99,8 +99,12 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
   const imageUrl = studio.imageUrl || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04";
   const title = studio.title || "Untitled Studio";
   const category = studio.category || "Studio";
-  const rating = studio.rating || "4.5";
-  const reviews = studio.reviews || 24;
+  
+  // 👇 রেটিং এবং রিভিউ ডাইনামিক করা হয়েছে
+  const rating = studio.rating ? Number(studio.rating).toFixed(1) : "New";
+  const reviews = studio.reviews || 0;
+  const reviewList = (studio as any).reviewList || [];
+  
   const location = studio.location || "Location not specified";
   const hourlyRate = studio.hourlyRate || "0";
   const securityDeposit = studio.securityDeposit || "0";
@@ -120,15 +124,14 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
 
   return (
     <div className="mt-8">
-      {/* 👇 মূল গ্রিড (Amenities + Booking Card) */}
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px] items-start">
         
-        {/* === বাম দিকের কন্টেন্ট === */}
         <div className="min-w-0">
           <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-gray-200 bg-slate-900 dark:border-white/5">
-            <Image
+            <ClientImage
               src={imageUrl}
               alt={title}
+              unoptimized
               className="h-full w-full object-cover"
               width={800}
               height={500}
@@ -173,7 +176,6 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
             </div>
           </div>
 
-          {/* 👇 অ্যামেনিটিজ সেকশন (এটির নিচের বর্ডার লাইনটি শুধু বাম দিকের অংশ জুড়ে থাকবে) */}
           {amenities.length > 0 && (
             <div className="mt-10 border-t border-gray-200 pt-8 pb-4 dark:border-white/5">
               <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">Included Amenities & Gear</h2>
@@ -192,9 +194,30 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
               </ul>
             </div>
           )}
+
+          {/* 👇 কাস্টমার রিভিউ সেকশন */}
+          <div className="mt-10 border-t border-gray-200 pt-8 dark:border-white/5">
+            <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">Customer Reviews</h2>
+            <div className="space-y-4">
+              {reviewList.length > 0 ? (
+                reviewList.map((rev: any, i: number) => (
+                  <div key={i} className="p-4 border rounded-xl dark:border-white/10 bg-white dark:bg-[#121212]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-semibold text-sm">{rev.user}</span>
+                      <span className="flex items-center text-xs text-violet-500">
+                        <Star className="h-3 w-3 fill-violet-500 mr-1" /> {rev.rating}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{rev.comment}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">No reviews yet. Be the first to review this space!</p>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* === ডান দিকের বুকিং কার্ড === */}
         <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-24 dark:border-white/5 dark:bg-[#121212]">
           <div className="flex items-baseline gap-1">
             <span className="text-2xl font-bold text-violet-500 dark:text-violet-400">৳</span>
@@ -253,7 +276,6 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
         </aside>
       </div>
 
-      {/* === Similar Studios (এটি এখন পুরো গ্রিডের নিচে থাকবে) === */}
       {similarStudios.length > 0 && (
         <div className="mt-16 border-t border-gray-200 pt-14 dark:border-white/5">
           <div className="mb-8">
@@ -268,10 +290,11 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
                 className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all hover:border-violet-500/50 hover:shadow-lg dark:border-white/5 dark:bg-[#121212] dark:hover:border-violet-500/50"
               >
                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-900">
-                  <Image
+                  <ClientImage
                     src={similar.imageUrl || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04"}
                     alt={similar.title || "Studio Image"}
                     fill
+                    unoptimized
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
@@ -287,7 +310,7 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
                     </h3>
                     <div className="flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-sm text-gray-800 dark:bg-white/5 dark:text-gray-300">
                       <Star className="h-3.5 w-3.5 fill-violet-500 text-violet-500" />
-                      <span>{similar.rating || "4.5"}</span>
+                      <span>{similar.rating || "New"}</span>
                     </div>
                   </div>
 
