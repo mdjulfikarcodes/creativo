@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
+import jsPDF from "jspdf";
 import {
   Dialog,
   DialogContent,
@@ -493,13 +494,45 @@ export default function MyBookingsView() {
                       </Button>
                     </div>
                   )}
-                  {booking.status === "Completed" && (
+                  {booking.status === "Completed" && !booking.review && (
                     <Button
                       type="button"
                       size="sm"
                       onClick={() => setReviewTarget(booking)}
                     >
                       Leave a Review
+                    </Button>
+                  )}
+                  {booking.review && (
+                    <div className="text-sm">
+                      {[...Array(booking.review.rating)].map(() => "★").join(" ")}
+                      {booking.review.comment}
+                    </div>
+                  )}
+                  {booking.status === "Confirmed" && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => {
+                        try {
+                          const doc = new jsPDF();
+                          doc.setFontSize(20);
+                          doc.text("Creativo Booking Invoice", 20, 20);
+                          doc.setFontSize(12);
+                          doc.text(`Studio: ${booking.studioName}`, 20, 40);
+                          doc.text(`Date: ${formatBookingDate(booking.date)}`, 20, 52);
+                          doc.text(`Time: ${formatBookingTimeRange(booking)}`, 20, 64);
+                          doc.text(`Total: ${formatPrice(booking.totalPrice)} BDT`, 20, 76);
+                          doc.text(`Booking ID: ${booking.id}`, 20, 88);
+                          doc.text("Thank you for booking with Creativo.", 20, 104);
+                          doc.save(`invoice-${booking.id}.pdf`);
+                          toast.add({ type: "success", title: "Invoice downloaded" });
+                        } catch {
+                          toast.add({ type: "error", title: "Invoice failed" });
+                        }
+                      }}
+                    >
+                      Download Invoice
                     </Button>
                   )}
                 </div>

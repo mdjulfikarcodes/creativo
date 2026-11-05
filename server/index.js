@@ -46,6 +46,20 @@ c.connect().then(() =>
         return;
       }
 
+      if (req.url?.startsWith("/studio") && req.method === "GET") {
+        const url = new URL(req.url, `http://${req.headers.host}`);
+        const query = {};
+        if (url.searchParams.get("location")) query.location = { $regex: url.searchParams.get("location"), $options: "i" };
+        if (url.searchParams.get("minPrice") || url.searchParams.get("maxPrice")) {
+          query.hourlyRate = {};
+          if (url.searchParams.get("minPrice")) query.hourlyRate.$gte = Number(url.searchParams.get("minPrice"));
+          if (url.searchParams.get("maxPrice")) query.hourlyRate.$lte = Number(url.searchParams.get("maxPrice"));
+        }
+        const studios = await db.collection("studios").find(query).toArray();
+        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(studios));
+        return;
+      }
+
       const m = req.url?.match(/^\/booking\/([^/]+)\/review$/);
       if (!m || req.method !== "POST") { res.writeHead(404); res.end(); return; }
       const token = await getToken(req);

@@ -55,7 +55,7 @@ export default function HeroSlider() {
         effect="fade"
         speed={1000}
         autoplay={{
-          delay: 3000, // ⏱️ ৩ সেকেন্ড পর পর স্লাইড হবে
+          delay: 5000, // ⏱️ ৫ সেকেন্ড পর পর স্লাইড হবে
           disableOnInteraction: false,
         }}
         pagination={{

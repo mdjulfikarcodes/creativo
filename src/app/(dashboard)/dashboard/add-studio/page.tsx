@@ -207,7 +207,7 @@ function StudioForm() {
         title: isEdit ? "Studio updated" : "Studio published",
         description: isEdit ? "Your studio listing has been updated successfully." : "Your studio listing has been created successfully.",
       });
-      router.push("/dashboard/my-studio");
+      router.push("/dashboard/my-listings");
       router.refresh();
     } catch (error) {
       toast.add({

@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { toast } from "@/components/ui/toast";
 
 const quickLinks = [
   { name: "Home", href: "/" },
@@ -11,11 +13,11 @@ const quickLinks = [
 ];
 
 const categories = [
-  { name: "Photo Studios", href: "/studios" },
-  { name: "Sound Stages", href: "/studios" },
-  { name: "Podcast Rooms", href: "/studios" },
-  { name: "Music Suites", href: "/studios" },
-  { name: "Art Workshops", href: "/studios" },
+  { name: "Photo Studios", href: "/studios?category=photo" },
+  { name: "Sound Stages", href: "/studios?category=sound" },
+  { name: "Podcast Rooms", href: "/studios?category=podcast" },
+  { name: "Music Suites", href: "/studios?category=music" },
+  { name: "Art Workshops", href: "/studios?category=art" },
 ];
 
 const socials = [
@@ -90,6 +92,38 @@ const socials = [
 ];
 
 export default function Footer() {
+  const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const [newsletterStatus, setNewsletterStatus] = useState<"idle" | "success" | "error">("idle");
+
+  async function handleNewsletterSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    const form = event.target as HTMLFormElement;
+    const emailInput = form.elements.namedItem("email") as HTMLInputElement;
+    const email = emailInput.value.trim();
+    if (!email) return;
+
+    setNewsletterLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/newsletter`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        setNewsletterStatus("success");
+        toast.add({ type: "success", title: "Subscribed!", description: "You're on the list." });
+        form.reset();
+      } else {
+        setNewsletterStatus("error");
+        toast.add({ type: "error", title: "Subscription failed", description: "Please try again later." });
+      }
+    } catch {
+      setNewsletterStatus("error");
+      toast.add({ type: "error", title: "Subscription failed", description: "Please try again later." });
+    } finally {
+      setNewsletterLoading(false);
+    }
+  }
   return (
     <footer className="w-full border-t border-gray-200 bg-gray-50 text-gray-900 transition-colors duration-200 dark:border-white/5 dark:bg-[#0a0a0a] dark:text-white">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
@@ -189,7 +223,7 @@ export default function Footer() {
             </p>
 
             <form
-              onSubmit={(event) => event.preventDefault()}
+              onSubmit={handleNewsletterSubmit}
               className="mt-5"
             >
               <label htmlFor="footer-email" className="sr-only">
@@ -197,6 +231,7 @@ export default function Footer() {
               </label>
               <input
                 id="footer-email"
+                name="email"
                 type="email"
                 required
                 placeholder="producer@agency.com"
@@ -204,10 +239,19 @@ export default function Footer() {
               />
               <button
                 type="submit"
-                className="mt-3 w-full rounded-lg bg-[#8b5cf6] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#7c3aed]"
+                disabled={newsletterLoading}
+                className={`mt-3 w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-colors ${
+                  newsletterLoading ? "bg-gray-400 cursor-not-allowed" : "bg-[#8b5cf6] hover:bg-[#7c3aed]"
+                }`}
               >
-                Subscribe
+                {newsletterLoading ? "Subscribing..." : "Subscribe"}
               </button>
+              {newsletterStatus === "success" && (
+                <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">Thanks for subscribing!</p>
+              )}
+              {newsletterStatus === "error" && (
+                <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">Something went wrong.</p>
+              )}
             </form>
           </div>
         </div>

@@ -209,6 +209,9 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
                       <span className="flex items-center text-xs text-violet-500">
                         <Star className="h-3 w-3 fill-violet-500 mr-1" /> {rev.rating}
                       </span>
+                      <span className="flex items-center gap-1 text-[10px] font-medium bg-violet-50/10 text-violet-600 rounded-full px-2 py-0.5 dark:bg-violet-500/20 dark:text-violet-400">
+                        <Check className="h-3 w-3 mr-1" /> Verified Booking
+                      </span>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">{rev.comment}</p>
                   </div>

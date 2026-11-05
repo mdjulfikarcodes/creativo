@@ -1,5 +1,7 @@
-import { Suspense } from "react";
+"use client";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { MapPin, Star } from "lucide-react";
 
 import StudioCard from "@/components/cards/StudioCard";
@@ -17,7 +19,7 @@ export default function StudiosPage() {
           <p className="mt-2 text-gray-600 dark:text-gray-400">Find and book the perfect space for your next creative project.</p>
         </div>
 
-        {/* ২. ডাটা ফেচিং কম্পোনেন্টকে Suspense দিয়ে ঘিরে দেওয়া হলো */}
+        {/* ৩. ডাটা ফেচিং কম্পোনেন্টকে Suspense দিয়ে ঘিরে দেওয়া হলো */}
         <Suspense fallback={<StudiosLoadingSkeleton />}>
           <StudiosList />
         </Suspense>
@@ -28,34 +30,58 @@ export default function StudiosPage() {
 }
 
 // ৩. ডাটা ফেচিং এবং লিস্ট রেন্ডার করার কম্পোনেন্ট
-async function StudiosList() {
-  let dataList: Studio[] = [];
+function StudiosList() {
+  const searchParams = useSearchParams();
+  const [searchLocation, setSearchLocation] = useState(searchParams.get("location") || "");
+  const [price, setPrice] = useState(searchParams.get("price") || "");
+  const [dataList, setDataList] = useState<Studio[]>([]);
 
-  try {
-    const studios = await fetch(`${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/studio`, {
-      cache: "no-store",
-    });
-    if (studios.ok) {
-      dataList = parseStudioList(await studios.json());
+  const fetchStudios = useCallback(async () => {
+    const p = new URLSearchParams();
+    if (searchLocation) p.set("location", searchLocation);
+    if (price) {
+      const [mn, mx] = price.split("-");
+      if (mn) p.set("minPrice", mn);
+      if (mx && mx !== "+") p.set("maxPrice", mx);
     }
-  } catch {
-    // Ignore fetch failures and render the empty state below.
-  }
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/studio?${p}`, { cache: "no-store" });
+    if (res.ok) setDataList(parseStudioList(await res.json()));
+  }, [searchLocation, price]);
 
-  if (dataList.length === 0) {
-    return (
-      <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center dark:border-white/5 dark:bg-[#121212]">
-        <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">No studios found</h2>
-        <p className="text-gray-600 dark:text-gray-400">We couldn&apos;t find any studios in the database right now.</p>
-      </div>
-    );
-  }
+  useEffect(() => { const t = setTimeout(fetchStudios, 500); return () => clearTimeout(t); }, [searchLocation, price, fetchStudios]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {dataList.map((studio) => (
-        <StudioCard key={studio._id || studio.id} studio={studio} />
-      ))}
+    <div>
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end">
+        <input
+          value={searchLocation}
+          onChange={(e) => setSearchLocation(e.target.value)}
+          placeholder="Search by location"
+          className="flex-1 h-11 rounded-lg border border-gray-200 bg-white px-4 text-sm dark:border-white/5 dark:bg-[#121212] dark:text-white"
+        />
+        <select
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          className="h-11 rounded-lg border border-gray-200 bg-white px-4 text-sm dark:border-white/5 dark:bg-[#121212] dark:text-white"
+        >
+          <option value="">Any Price</option>
+          <option value="0-2000">Under ৳2,000</option>
+          <option value="2000-5000">৳2,000–৳5,000</option>
+          <option value="5000-">Over ৳5,000</option>
+        </select>
+      </div>
+      {dataList.length === 0 ? (
+        <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center dark:border-white/5 dark:bg-[#121212]">
+          <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">No studios found</h2>
+          <p className="text-gray-600 dark:text-gray-400">We couldn&apos;t find any studios in the database right now.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {dataList.map((studio) => (
+            <StudioCard key={studio._id || studio.id} studio={studio} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
