@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { ArrowLeft, Check, MapPin, Star, Users, ShieldCheck } from "lucide-react";
 import ClientImage from "@/components/shared/ClientImage";
 import BookingDialog from "@/components/booking/BookingDialog";
@@ -93,7 +93,7 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
   const { id } = await idPromise;
   const studio = await getStudioData(id);
 
-  if (!studio) notFound();
+  if (!studio) redirect("/dashboard/my-listings");
 
   const similarStudios = await getSimilarStudios(studio._id || studio.id || id);
 

@@ -123,8 +123,19 @@
   }
   body {
     @apply bg-background text-foreground transition-colors duration-300;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
   html {
     @apply font-sans;
+  }
+  button,
+  a,
+  [role="button"] {
+    @apply cursor-pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"],
+  [role="button"][aria-disabled="true"] {
+    @apply cursor-not-allowed;
   }
 }
