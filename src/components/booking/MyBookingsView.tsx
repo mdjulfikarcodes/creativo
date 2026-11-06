@@ -236,7 +236,7 @@ export default function MyBookingsView() {
     try {
       const token = await getBearerToken();
       const res = await fetch(
-        `${getApiBaseUrl()}/booking/${encodeURIComponent(reviewTarget.id)}/review`,
+        `${getApiBaseUrl()}/studio/${encodeURIComponent(reviewTarget.studioId || reviewTarget.id)}/review`,
         {
           method: "POST",
           credentials: "include",
@@ -261,7 +261,13 @@ export default function MyBookingsView() {
       setReviewTarget(null);
       setReviewRating("5");
       setReviewComment("");
-      refreshBookings();
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === reviewTarget.id
+            ? { ...b, review: { rating: Number(reviewRating), comment: reviewComment } }
+            : b,
+        ),
+      );
     } catch (err) {
       toast.add({
         type: "error",

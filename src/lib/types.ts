@@ -14,6 +14,7 @@ export type Studio = {
   capacity?: number | string;
   rating?: number | string;
   reviews?: number | string;
+  reviewList?: { user: string; rating: number; comment: string }[];
   price?: number | string;
   amenities?: string[] | string;
 };

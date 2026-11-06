@@ -50,10 +50,12 @@ function normalizeBookingStatus(value: unknown): BookingStatus {
   if (
     status.includes("confirm") ||
     status.includes("approve") ||
-    status.includes("accept") ||
-    status.includes("complete")
+    status.includes("accept")
   ) {
     return "Confirmed";
+  }
+  if (status.includes("complete")) {
+    return "Completed";
   }
 
   return "Pending";

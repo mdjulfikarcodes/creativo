@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Check, MapPin, Star, Users, ShieldCheck } from "lucide-react";
 import ClientImage from "@/components/shared/ClientImage";
 import BookingDialog from "@/components/booking/BookingDialog";
+import WriteReviewForm from "@/components/studio/WriteReviewForm";
 import { extractStudio, parseStudioList } from "@/lib/studios";
 import type { Studio } from "@/lib/types";
 
@@ -221,6 +222,8 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
               )}
             </div>
           </div>
+
+          <WriteReviewForm studioId={String(studio._id || studio.id || id)} />
         </div>
 
         <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-24 dark:border-white/5 dark:bg-[#121212]">

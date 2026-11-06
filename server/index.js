@@ -55,8 +55,51 @@ c.connect().then(() =>
           if (url.searchParams.get("minPrice")) query.hourlyRate.$gte = Number(url.searchParams.get("minPrice"));
           if (url.searchParams.get("maxPrice")) query.hourlyRate.$lte = Number(url.searchParams.get("maxPrice"));
         }
+        if (url.searchParams.get("minCapacity") || url.searchParams.get("maxCapacity")) {
+          query.maxCapacity = {};
+          if (url.searchParams.get("minCapacity")) query.maxCapacity.$gte = Number(url.searchParams.get("minCapacity"));
+          if (url.searchParams.get("maxCapacity")) query.maxCapacity.$lte = Number(url.searchParams.get("maxCapacity"));
+        }
         const studios = await db.collection("studios").find(query).toArray();
         res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(studios));
+        return;
+      }
+
+      if (req.url === "/wishlist" && req.method === "GET") {
+        const token = await getToken(req);
+        if (!token) { res.writeHead(401).end(JSON.stringify({ error: "unauthorized" })); return; }
+        try { await jwtVerify(token, secret); } catch { res.writeHead(401).end(JSON.stringify({ error: "invalid token" })); return; }
+        const email = (await jwtVerify(token, secret)).payload.email;
+        const wishes = await db.collection("wishlists").find({ userId: email }).toArray();
+        console.log("[wishlist GET] wishes:", JSON.stringify(wishes));
+        const ids = wishes.map(w => new ObjectId(w.studioId));
+        const studios = ids.length ? await db.collection("studios").find({ _id: { $in: ids } }).toArray() : [];
+        console.log("[wishlist GET] studios:", JSON.stringify(studios.map(s => ({ _id: s._id, title: s.title }))));
+        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(studios));
+        return;
+      }
+      if (req.url === "/wishlist" && req.method === "POST") {
+        const token = await getToken(req);
+        if (!token) { res.writeHead(401).end(JSON.stringify({ error: "unauthorized" })); return; }
+        try { await jwtVerify(token, secret); } catch { res.writeHead(401).end(JSON.stringify({ error: "invalid token" })); return; }
+        const email = (await jwtVerify(token, secret)).payload.email;
+        let body = "";
+        for await (const chunk of req) body += chunk;
+        const { studioId } = JSON.parse(body || "{}");
+        console.log("[wishlist POST] studioId:", studioId, "user:", email);
+        await db.collection("wishlists").updateOne({ userId: email, studioId }, { $set: { userId, studioId, createdAt: new Date() } }, { upsert: true });
+        res.writeHead(200).end(JSON.stringify({ ok: true }));
+        return;
+      }
+      if (req.url?.startsWith("/wishlist/") && req.method === "GET") {
+        const token = await getToken(req);
+        if (!token) { res.writeHead(401).end(JSON.stringify({ error: "unauthorized" })); return; }
+        try { await jwtVerify(token, secret); } catch { res.writeHead(401).end(JSON.stringify({ error: "invalid token" })); return; }
+        const email = (await jwtVerify(token, secret)).payload.email;
+        const studioId = req.url.split("/wishlist/")[1];
+        const wish = await db.collection("wishlists").findOne({ userId: email, studioId });
+        console.log("[wishlist check] studioId:", studioId, "wishlisted:", !!wish);
+        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ wishlisted: !!wish }));
         return;
       }
 

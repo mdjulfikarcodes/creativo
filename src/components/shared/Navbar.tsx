@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Sun, Moon } from "lucide-react";
+import { Heart, Sun, Moon } from "lucide-react";
 import { signOut, useSession } from "@/lib/auth-client";
 
 const emptySubscribe = () => () => {};
@@ -195,6 +195,16 @@ export default function Navbar() {
               <div className="h-4.5 w-4.5" />
             )}
           </button>
+
+          {isAuthenticated && (
+            <Link
+              href="/wishlist"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
+              aria-label="Wishlist"
+            >
+              <Heart className="h-4.5 w-4.5" />
+            </Link>
+          )}
 
           {/* Authenticated State */}
           {isPending ? (

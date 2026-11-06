@@ -12,7 +12,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-white transition-colors duration-200 dark:bg-[#0a0a0a] lg:grid lg:grid-cols-[1.05fr_1fr]">
       {/* Brand panel */}
-      <aside className="relative hidden overflow-hidden bg-[#08040f] px-12 py-12 lg:flex lg:flex-col lg:justify-between xl:px-16">
+      <aside className="relative hidden overflow-hidden bg-[#08040f] px-12 py-12 lg:flex lg:flex-col lg:items-center lg:justify-center text-center xl:px-16">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute top-1/4 -left-32 h-[28rem] w-[28rem] rounded-full bg-[#8b5cf6]/25 blur-[120px]"
@@ -48,7 +48,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           </span>
         </Link>
 
-        <div className="relative z-10 max-w-md">
+        <div className="relative z-10 max-w-md mx-auto">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.7rem] font-medium tracking-[0.16em] text-purple-200 uppercase">
             <span className="h-1.5 w-1.5 rounded-full bg-[#8b5cf6]" />
             Creative studio rentals
@@ -76,24 +76,6 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
               </li>
             ))}
           </ul>
-        </div>
-
-        <div className="relative z-10 rounded-2xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur-sm">
-          <p className="text-sm leading-relaxed text-gray-300">
-            &ldquo;Creativo made it ridiculously easy to find a cyc wall studio
-            for our campaign shoot. Booked it in under five minutes.&rdquo;
-          </p>
-          <div className="mt-4 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#8b5cf6] to-fuchsia-500 text-xs font-semibold text-white">
-              SR
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white">Sara Rahman</p>
-              <p className="text-xs text-gray-400">
-                Creative Director, Studio Nine
-              </p>
-            </div>
-          </div>
         </div>
       </aside>
 

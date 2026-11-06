@@ -34,6 +34,7 @@ function StudiosList() {
   const searchParams = useSearchParams();
   const [searchLocation, setSearchLocation] = useState(searchParams.get("location") || "");
   const [price, setPrice] = useState(searchParams.get("price") || "");
+  const [capacity, setCapacity] = useState(searchParams.get("capacity") || "");
   const [dataList, setDataList] = useState<Studio[]>([]);
 
   const fetchStudios = useCallback(async () => {
@@ -44,11 +45,16 @@ function StudiosList() {
       if (mn) p.set("minPrice", mn);
       if (mx && mx !== "+") p.set("maxPrice", mx);
     }
+    if (capacity) {
+      const [mn, mx] = capacity.split("-");
+      if (mn) p.set("minCapacity", mn);
+      if (mx && mx !== "+") p.set("maxCapacity", mx);
+    }
     const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/studio?${p}`, { cache: "no-store" });
     if (res.ok) setDataList(parseStudioList(await res.json()));
-  }, [searchLocation, price]);
+  }, [searchLocation, price, capacity]);
 
-  useEffect(() => { const t = setTimeout(fetchStudios, 500); return () => clearTimeout(t); }, [searchLocation, price, fetchStudios]);
+  useEffect(() => { const t = setTimeout(fetchStudios, 500); return () => clearTimeout(t); }, [searchLocation, price, capacity, fetchStudios]);
 
   return (
     <div>
@@ -68,6 +74,17 @@ function StudiosList() {
           <option value="0-2000">Under ৳2,000</option>
           <option value="2000-5000">৳2,000–৳5,000</option>
           <option value="5000-">Over ৳5,000</option>
+        </select>
+        <select
+          value={capacity}
+          onChange={(e) => setCapacity(e.target.value)}
+          className="h-11 rounded-lg border border-gray-200 bg-white px-4 text-sm dark:border-white/5 dark:bg-[#121212] dark:text-white"
+        >
+          <option value="">Any Capacity</option>
+          <option value="1-5">1-5 people</option>
+          <option value="5-10">5-10 people</option>
+          <option value="10-20">10-20 people</option>
+          <option value="20-">20+ people</option>
         </select>
       </div>
       {dataList.length === 0 ? (
