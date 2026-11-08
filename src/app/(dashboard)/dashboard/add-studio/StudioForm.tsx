@@ -39,11 +39,11 @@ const formSchema = z.object({
 });
 
 const PRESET_IMAGES = [
-  { id: "1", url: "https://shorturl.at/Glqbv", label: "Photo Studio" },
-  { id: "2", url: "https://shorturl.at/pCgE6", label: "Sound Stage" },
-  { id: "3", url: "https://shorturl.at/tc6jA", label: "Podcast Suite" },
-  { id: "4", url: "https://shorturl.at/SdXFe", label: "Music Suite" },
-  { id: "5", url: "https://shorturl.at/HHm77", label: "Art Workshops" },
+  { id: "1", url: "https://images.unsplash.com/photo-1471341971476-ae15ff5dd4ea?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D", label: "Photo Studio" },
+  { id: "2", url: "https://images.unsplash.com/photo-1559732277-7453b141e3a1?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D", label: "Sound Stage" },
+  { id: "3", url: "https://plus.unsplash.com/premium_photo-1679079455767-1bbb40492d6a?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D", label: "Podcast Suite" },
+  { id: "4", url: "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D", label: "Music Suite" },
+  { id: "5", url: "https://images.unsplash.com/photo-1514195037031-83d60ed3b448?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D", label: "Art Workshops" },
 ];
 
 export default function StudioForm() {
@@ -59,6 +59,7 @@ export default function StudioForm() {
   const [loadingStudio, setLoadingStudio] = useState(isEdit);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+const [uploading, setUploading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -379,7 +380,48 @@ export default function StudioForm() {
                     <FormControl>
                       <Input placeholder="Image Url" className="pl-9 bg-background border-input" {...field} />
                     </FormControl>
-                  </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="mt-2 block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-violet-50 file:text-violet-700
+                        hover:file:bg-violet-100 dark:file:bg-violet-900/20 dark:file:text-violet-300"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setUploading(true);
+                        try {
+                          const formData = new FormData();
+                          formData.append("image", file);
+                          const baseUrl = (process.env.NEXT_PUBLIC_SERVER_BASE_URL ?? "").replace(/\/+$/, "");
+                          const token = await getBearerToken();
+                          const res = await fetch(`${baseUrl}/upload`, {
+                            method: "POST",
+                            credentials: "include",
+                            headers: { Authorization: `Bearer ${token}` },
+                            body: formData,
+                          });
+                          const data = await res.json();
+                          if (data.success) {
+                            form.setValue("imageUrl", data.data.url);
+                            toast.add({ type: "success", title: "Image uploaded" });
+                          } else {
+                            toast.add({ type: "error", title: "Image upload failed" });
+                          }
+                        } catch {
+                          toast.add({ type: "error", title: "Image upload failed" });
+                        } finally {
+                          setUploading(false);
+                        }
+                      }}
+                    />
+                      {uploading && (
+                        <Loader2 className="animate-spin h-4 w-4 text-violet-600" />
+                      )}
+                    </div>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -401,8 +443,9 @@ export default function StudioForm() {
                         alt={img.label}
                         width={400}
                         height={96}
-                        unoptimized
+                        sizes="400px"
                         className="w-full h-24 object-cover opacity-80 hover:opacity-100 transition-opacity"
+                        onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04"; }}
                       />
                       <div className="absolute bottom-0 w-full bg-background/80 text-xs py-1.5 text-center text-foreground">
                         {img.label}

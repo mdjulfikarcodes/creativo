@@ -1,7 +1,7 @@
 "use client";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin, Star } from "lucide-react";
 
 import StudioCard from "@/components/cards/StudioCard";
@@ -31,11 +31,15 @@ export default function StudiosPage() {
 
 // ৩. ডাটা ফেচিং এবং লিস্ট রেন্ডার করার কম্পোনেন্ট
 function StudiosList() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [searchLocation, setSearchLocation] = useState(searchParams.get("location") || "");
   const [price, setPrice] = useState(searchParams.get("price") || "");
   const [capacity, setCapacity] = useState(searchParams.get("capacity") || "");
+  const [category, setCategory] = useState(searchParams.get("category") || "");
   const [dataList, setDataList] = useState<Studio[]>([]);
+  const [loading, setLoading] = useState(false);
+
 
   const fetchStudios = useCallback(async () => {
     const p = new URLSearchParams();
@@ -50,11 +54,21 @@ function StudiosList() {
       if (mn) p.set("minCapacity", mn);
       if (mx && mx !== "+") p.set("maxCapacity", mx);
     }
+    if (category) p.set("category", category);
     const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/studio?${p}`, { cache: "no-store" });
-    if (res.ok) setDataList(parseStudioList(await res.json()));
-  }, [searchLocation, price, capacity]);
+    if (res.ok) {
+      const json = await res.json();
+      const studios = json && typeof json === "object" && "studios" in json ? json.studios : json;
+      setDataList(parseStudioList(studios));
+      setLoading(false);
+    }
+  }, [searchLocation, price, capacity, category]);
 
-  useEffect(() => { const t = setTimeout(fetchStudios, 500); return () => clearTimeout(t); }, [searchLocation, price, capacity, fetchStudios]);
+  useEffect(() => {
+    setLoading(true);
+    const t = setTimeout(fetchStudios, 500);
+    return () => clearTimeout(t);
+  }, [searchLocation, price, capacity, category, fetchStudios]);
 
   return (
     <div>
@@ -86,6 +100,18 @@ function StudiosList() {
           <option value="10-20">10-20 people</option>
           <option value="20-">20+ people</option>
         </select>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="h-11 rounded-lg border border-gray-200 bg-white px-4 text-sm dark:border-white/5 dark:bg-[#121212] dark:text-white"
+        >
+          <option value="">All Categories</option>
+          <option value="Photo Studios">Photo Studios</option>
+          <option value="Sound Stages">Sound Stages</option>
+          <option value="Podcast Rooms">Podcast Rooms</option>
+          <option value="Music Suites">Music Suites</option>
+          <option value="Art Workshops">Art Workshops</option>
+        </select>
       </div>
       {dataList.length === 0 ? (
         <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center dark:border-white/5 dark:bg-[#121212]">
@@ -93,11 +119,13 @@ function StudiosList() {
           <p className="text-gray-600 dark:text-gray-400">We couldn&apos;t find any studios in the database right now.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {dataList.map((studio) => (
-            <StudioCard key={studio._id || studio.id} studio={studio} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {dataList.map((studio) => (
+              <StudioCard key={studio._id || studio.id} studio={studio} />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

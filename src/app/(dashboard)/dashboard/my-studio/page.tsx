@@ -317,8 +317,8 @@ export default function MyStudioListings() {
                                 alt={studio.title || "Studio"}
                                 className="w-full h-full object-cover opacity-90"
                                 fill
-                                unoptimized
                                 sizes="64px"
+                                onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04"; }}
                               />
                             </div>
                             <div>

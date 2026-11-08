@@ -222,14 +222,19 @@ export default function Navbar() {
                       alt={userName}
                       width={36}
                       height={36}
-                      unoptimized
+                      sizes="36px"
                       className="h-full w-full object-cover"
                       onError={() => setImgError(true)}
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-[#8b5cf6] text-xs font-semibold text-white">
-                      {userInitials || "U"}
-                    </div>
+                    <Image
+                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userName || "User")}&background=8b5cf6&color=fff`}
+                      alt={userName}
+                      width={36}
+                      height={36}
+                      sizes="36px"
+                      className="h-full w-full object-cover"
+                    />
                   )}
                 </div>
                 <span className="hidden text-sm font-medium text-gray-900 dark:text-white sm:block">

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ClientImage from "@/components/shared/ClientImage";
+import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "cn";
 import { Heart, MapPin, Star, Users } from "lucide-react";
 import { toast } from "@/components/ui/toast";
@@ -17,6 +18,7 @@ export type StudioCardProps = {
 };
 
 export default function StudioCard({ studio, href, className }: StudioCardProps) {
+  const router = useRouter();
   const studioHref = href ?? `/studios/${studio._id || studio.id}`;
   const image = studio.imageUrl || studio.image || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04";
   const price = studio.hourlyRate || studio.price || 0;
@@ -48,6 +50,11 @@ export default function StudioCard({ studio, href, className }: StudioCardProps)
     const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
     if (!baseUrl) return;
     const token = await getBearerToken();
+    if (!token) {
+      toast.add({ type: "info", title: "Please login to save studios" });
+      router.push("/login");
+      return;
+    }
     const res = await fetch(`${baseUrl}/wishlist`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
@@ -73,13 +80,20 @@ export default function StudioCard({ studio, href, className }: StudioCardProps)
     >
       {/* Media */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-900">
-        <ClientImage
+        <Image
+          key={image}
           src={image}
           alt={studio.title || "Studio"}
           fill
           unoptimized
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
+          onError={(e) => {
+            const img = e.currentTarget as HTMLImageElement;
+            if (!img.src.includes("images.unsplash.com")) {
+              img.src = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04";
+            }
+          }}
         />
         <button
           onClick={toggleWishlist}
@@ -111,13 +125,13 @@ export default function StudioCard({ studio, href, className }: StudioCardProps)
             <div className="flex min-w-0 items-center gap-1.5">
               <Star className="h-4 w-4 shrink-0 fill-[#8b5cf6] text-[#8b5cf6]" />
               <span className="text-sm font-semibold text-gray-900 dark:text-white">{rating}</span>
-              <span className="text-xs text-gray-500">({studio.reviews || 24})</span>
+              <span className="text-xs text-gray-500">({studio.reviews || 0})</span>
             </div>
           )}
 
           <div className="flex min-w-0 items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
             <MapPin className="h-3.5 w-3.5 shrink-0 text-violet-400" />
-            <span className="truncate">{studio.location || "Riyadh"}</span>
+            <span className="truncate">{studio.location}</span>
           </div>
         </div>
 
@@ -128,7 +142,7 @@ export default function StudioCard({ studio, href, className }: StudioCardProps)
         </h3>
 
         <p className="mt-2 mb-5 line-clamp-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-          {studio.overview || studio.description || "Production-ready creative workspace in Riyadh."}
+          {studio.overview || studio.description || "Production-ready creative workspace."}
         </p>
 
         {latestReview ? (

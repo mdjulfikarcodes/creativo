@@ -78,7 +78,9 @@ export default function HeroSlider() {
                 alt={slide.title1}
                 fill
                 priority
+                sizes="100vw"
                 className="object-cover"
+                onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04"; }}
               />
               {/* Gradient Overlay for text readability */}
               <div className="absolute inset-0 bg-black/60"></div>

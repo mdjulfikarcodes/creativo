@@ -92,17 +92,14 @@ const socials = [
 ];
 
 export default function Footer() {
-  const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
   const [newsletterStatus, setNewsletterStatus] = useState<"idle" | "success" | "error">("idle");
 
-  async function handleNewsletterSubmit(event: React.FormEvent) {
+  async function handleSubscribe(event: React.FormEvent) {
     event.preventDefault();
-    const form = event.target as HTMLFormElement;
-    const emailInput = form.elements.namedItem("email") as HTMLInputElement;
-    const email = emailInput.value.trim();
     if (!email) return;
-
-    setNewsletterLoading(true);
+    setLoading(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/newsletter`, {
         method: "POST",
@@ -111,17 +108,17 @@ export default function Footer() {
       });
       if (res.ok) {
         setNewsletterStatus("success");
-        toast.add({ type: "success", title: "Subscribed!", description: "You're on the list." });
-        form.reset();
+        toast.add({ type: "success", title: "Subscribed successfully!" });
+        setEmail("");
       } else {
-        setNewsletterStatus("error");
-        toast.add({ type: "error", title: "Subscription failed", description: "Please try again later." });
+        const errData = await res.json();
+        throw new Error(errData?.message || "Subscription failed");
       }
     } catch {
       setNewsletterStatus("error");
       toast.add({ type: "error", title: "Subscription failed", description: "Please try again later." });
     } finally {
-      setNewsletterLoading(false);
+      setLoading(false);
     }
   }
   return (
@@ -223,7 +220,7 @@ export default function Footer() {
             </p>
 
             <form
-              onSubmit={handleNewsletterSubmit}
+              onSubmit={handleSubscribe}
               className="mt-5"
             >
               <label htmlFor="footer-email" className="sr-only">
@@ -235,16 +232,18 @@ export default function Footer() {
                 type="email"
                 required
                 placeholder="producer@agency.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value.trim())}
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-[#8b5cf6] dark:border-white/10 dark:bg-[#121212] dark:text-white dark:placeholder:text-gray-500"
               />
               <button
                 type="submit"
-                disabled={newsletterLoading}
+                disabled={loading}
                 className={`mt-3 w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-colors ${
-                  newsletterLoading ? "bg-gray-400 cursor-not-allowed" : "bg-[#8b5cf6] hover:bg-[#7c3aed]"
+                  loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#8b5cf6] hover:bg-[#7c3aed]"
                 }`}
               >
-                {newsletterLoading ? "Subscribing..." : "Subscribe"}
+                {loading ? "Subscribing..." : "Subscribe"}
               </button>
               {newsletterStatus === "success" && (
                 <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">Thanks for subscribing!</p>

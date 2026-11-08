@@ -51,7 +51,7 @@ async function FeaturedStudiosList() {
 
   try {
     const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL || "http://localhost:5000";
-    const res = await fetch(`${baseUrl}/studio`, { cache: "no-store" });
+    const res = await fetch(`${baseUrl}/studio`, { next: { revalidate: 60 } });
 
     if (res.ok) {
       const data = await res.json();

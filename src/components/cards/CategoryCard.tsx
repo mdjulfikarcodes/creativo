@@ -33,9 +33,6 @@ export default function CategoryCard({
       </span>
 
       <h3 className="mt-5 text-base font-bold text-gray-900 dark:text-white">{category.title}</h3>
-      <p className="mt-1 text-sm font-semibold text-[#8b5cf6]">
-        {category.count}
-      </p>
       <p className="mt-3 text-xs leading-relaxed text-gray-600 dark:text-gray-400">
         {category.description}
       </p>

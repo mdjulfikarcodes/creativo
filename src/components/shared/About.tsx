@@ -141,7 +141,9 @@ export default function AboutPage() {
                     src={member.avatar}
                     alt={member.name}
                     fill
+                    sizes="24px"
                     className="object-cover"
+                    onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04"; }}
                   />
                 </div>
                 <div>

@@ -60,6 +60,10 @@ c.connect().then(() =>
           if (url.searchParams.get("minCapacity")) query.maxCapacity.$gte = Number(url.searchParams.get("minCapacity"));
           if (url.searchParams.get("maxCapacity")) query.maxCapacity.$lte = Number(url.searchParams.get("maxCapacity"));
         }
+        if (url.searchParams.get("category")) {
+          query.category = { $regex: url.searchParams.get("category"), $options: "i" };
+        }
+        query.deletedAt = { $exists: false };
         const studios = await db.collection("studios").find(query).toArray();
         res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(studios));
         return;

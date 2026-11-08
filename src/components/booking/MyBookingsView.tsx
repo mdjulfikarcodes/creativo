@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
-import jsPDF from "jspdf";
 import {
   Dialog,
   DialogContent,
@@ -75,6 +74,26 @@ function BookingsSkeleton() {
         </div>
       ))}
     </div>
+  );
+}
+
+const STUDIO_IMAGE_FALLBACK = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=800&auto=format&fit=crop";
+
+function BookingStudioImage({ src, alt }: { src: string; alt: string }) {
+  const [imageSrc, setImageSrc] = useState(src);
+
+  return (
+    <Image
+      src={imageSrc}
+      alt={alt}
+      fill
+      unoptimized
+      sizes="(max-width: 640px) 100vw, 160px"
+      className="object-cover transition-transform duration-500 group-hover:scale-105"
+      onError={() => {
+        setImageSrc(STUDIO_IMAGE_FALLBACK);
+      }}
+    />
   );
 }
 
@@ -422,14 +441,7 @@ export default function MyBookingsView() {
             >
               <div className="flex flex-col gap-5 p-4 sm:flex-row sm:items-center sm:p-5">
                 <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-white/5 dark:bg-white/5 sm:h-28 sm:w-40">
-                  <Image
-                    src={booking.image}
-                    alt={booking.studioName}
-                    fill
-                    unoptimized
-                    sizes="(max-width: 640px) 100vw, 160px"
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
+                  <BookingStudioImage src={booking.image} alt={booking.studioName} />
                 </div>
 
                 <div className="min-w-0 flex-1 space-y-3">
@@ -519,8 +531,9 @@ export default function MyBookingsView() {
                     <Button
                       type="button"
                       size="sm"
-                      onClick={() => {
+                      onClick={async () => {
                         try {
+                          const { jsPDF } = await import("jspdf");
                           const doc = new jsPDF();
                           doc.setFontSize(20);
                           doc.text("Creativo Booking Invoice", 20, 20);
