@@ -245,11 +245,10 @@ export default function Navbar() {
                 </svg>
               </button>
 
-              {/* 👇 Dropdown Menu (ড্যাশবোর্ডের লিংকসহ) */}
+              {/* Dropdown Menu */}
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-3 w-56 rounded-xl border border-gray-200 bg-white py-2 shadow-2xl dark:border-white/10 dark:bg-[#121212]">
                   
-                  {/* ইউজারের নাম ও ইমেইল */}
                   <div className="px-4 py-2 border-b border-gray-100 dark:border-white/5 mb-1">
                     <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                       {userName}
@@ -259,7 +258,7 @@ export default function Navbar() {
                     </p>
                   </div>
 
-                  {/* লিংকগুলো */}
+                  {/* Links */}
                   <Link href="/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">
                     Overview
                   </Link>

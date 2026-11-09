@@ -16,7 +16,6 @@ export type Booking = {
   review?: { rating: number; comment: string };
 };
 
-/** Base URL for the Express API, without a trailing slash. */
 export function getApiBaseUrl(): string {
   return (process.env.NEXT_PUBLIC_SERVER_BASE_URL ?? "").replace(/\/+$/, "");
 }
@@ -61,10 +60,6 @@ function normalizeBookingStatus(value: unknown): BookingStatus {
   return "Pending";
 }
 
-/**
- * The API can return a bare array or wrap it in `data` / `bookings`.
- * Keep this tolerant so the UI survives small backend shape changes.
- */
 function extractBookings(payload: unknown): unknown[] {
   if (Array.isArray(payload)) return payload;
   if (!isRecord(payload)) return [];
@@ -135,7 +130,6 @@ export function formatBookingDate(value: unknown): string {
   const raw = asString(value);
   if (!raw) return "Date not specified";
 
-  // Parse date-only values in local time so they never shift a day backwards.
   const dateOnly = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
   const date = dateOnly
     ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
@@ -189,7 +183,6 @@ export function formatPrice(value: number): string {
   }).format(value);
 }
 
-/** Duration in hours between two `HH:MM` values. Returns 0 for invalid ranges. */
 export function calculateHours(startTime: string, endTime: string): number {
   const toMinutes = (value: string) => {
     const [hours, minutes] = value.split(":").map(Number);
@@ -207,14 +200,7 @@ export function calculateHours(startTime: string, endTime: string): number {
   return (end - start) / 60;
 }
 
-/**
- * Loads the signed-in user's bookings. Kept side-effect free (no React state)
- * so it can be called from effects without triggering cascading renders.
- */
-export async function fetchMyBookings(
-  userEmail: string,
-  signal?: AbortSignal,
-): Promise<Booking[]> {
+export async function fetchMyBookings(): Promise<Booking[]> {
   const baseUrl = getApiBaseUrl();
   if (!baseUrl) {
     throw new Error(
@@ -222,20 +208,12 @@ export async function fetchMyBookings(
     );
   }
 
-  if (!userEmail) {
-    throw new Error("Please sign in to view your bookings.");
-  }
-
-  const response = await fetch(
-    `${baseUrl}/booking/my-bookings?userEmail=${encodeURIComponent(userEmail)}`,
-    {
-      method: "GET",
-      credentials: "include",
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-      signal,
-    },
-  );
+  const response = await fetch(`${baseUrl}/booking/my-bookings`, {
+    method: "GET",
+    credentials: "include",
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
 
   if (response.status === 401 || response.status === 403) {
     throw new Error("Please sign in to view your bookings.");
@@ -251,8 +229,9 @@ export async function fetchMyBookings(
   }
 
   const payload = await response.json();
+  const bookings = extractBookings(payload);
 
-  return extractBookings(payload)
+  return bookings
     .map(normalizeBooking)
     .filter((booking): booking is Booking => booking !== null);
 }

@@ -5,17 +5,15 @@ import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, EffectFade, Navigation, Pagination } from "swiper/modules";
 
-// Swiper স্টাইল ইমপোর্ট
 import "swiper/css";
 import "swiper/css/effect-fade";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 
-// 📸 আপনার ৪টি ছবির ডাটা (এখানে আপনার আসল ছবির লিংকগুলো বসাবেন)
 const slidesData = [
   {
     id: 1,
-    image: "https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?q=80&w=2000&auto=format&fit=crop", // Photo Studio
+    image: "https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?q=80&w=2000&auto=format&fit=crop",
     badge: "PHOTOGRAPHY & EDITORIAL",
     title1: "Where Masterpieces Find",
     title2: "Their Light",
@@ -23,7 +21,7 @@ const slidesData = [
   },
   {
     id: 2,
-    image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?q=80&w=2000&auto=format&fit=crop", // Film Stage
+    image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?q=80&w=2000&auto=format&fit=crop",
     badge: "CINEMA & COMMERCIALS",
     title1: "Broadcast Soundstages Built",
     title2: "for Scale",
@@ -31,7 +29,7 @@ const slidesData = [
   },
   {
     id: 3,
-    image: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=2000&auto=format&fit=crop", // Music Studio
+    image: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=2000&auto=format&fit=crop",
     badge: "RECORDING & MIXING",
     title1: "Acoustically Tuned Music",
     title2: "Production Suites",
@@ -39,7 +37,7 @@ const slidesData = [
   },
   {
     id: 4,
-    image: "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=2000&auto=format&fit=crop", // Podcast
+    image: "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=2000&auto=format&fit=crop",
     badge: "VIDEO & AUDIO PODCASTS",
     title1: "Next-Generation Broadcast &",
     title2: "Podcast Suites",
@@ -55,7 +53,7 @@ export default function HeroSlider() {
         effect="fade"
         speed={1000}
         autoplay={{
-          delay: 5000, // ⏱️ ৫ সেকেন্ড পর পর স্লাইড হবে
+          delay: 5000,
           disableOnInteraction: false,
         }}
         pagination={{
@@ -124,7 +122,6 @@ export default function HeroSlider() {
         ))}
       </Swiper>
 
-      {/* 🎯 Custom Navigation Arrows (Left & Right) */}
       <button className="custom-prev absolute left-4 top-1/2 -translate-y-1/2 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/10 hover:bg-black/60 transition-all cursor-pointer">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M15 18l-6-6 6-6" />
@@ -136,7 +133,6 @@ export default function HeroSlider() {
         </svg>
       </button>
 
-      {/* 🎯 Custom Pagination Dots (Bottom Center) */}
       <div className="custom-pagination absolute bottom-8 left-0 right-0 z-20 flex justify-center gap-2"></div>
 
       {/* CSS Override for active pagination dot (Swiper default active dot style) */}

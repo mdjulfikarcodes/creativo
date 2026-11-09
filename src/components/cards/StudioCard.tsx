@@ -7,8 +7,6 @@ import { useRouter } from "next/navigation";
 import { cn } from "cn";
 import { Heart, MapPin, Star, Users } from "lucide-react";
 import { toast } from "@/components/ui/toast";
-import { getBearerToken } from "@/lib/auth-client";
-
 import type { Studio } from "@/lib/types";
 
 export type StudioCardProps = {
@@ -32,10 +30,8 @@ export default function StudioCard({ studio, href, className }: StudioCardProps)
     const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
     if (!baseUrl) return;
     (async () => {
-      const token = await getBearerToken();
       const res = await fetch(`${baseUrl}/wishlist/${studio._id}`, {
         credentials: "include",
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       });
       if (res.ok) {
         const d = await res.json();
@@ -49,22 +45,21 @@ export default function StudioCard({ studio, href, className }: StudioCardProps)
     e.stopPropagation();
     const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
     if (!baseUrl) return;
-    const token = await getBearerToken();
-    if (!token) {
-      toast.add({ type: "info", title: "Please login to save studios" });
-      router.push("/login");
-      return;
-    }
     const res = await fetch(`${baseUrl}/wishlist`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ studioId: String(studio._id || studio.id) }),
       credentials: "include",
     });
     const data = await res.json();
     if (res.ok) {
-      setIsWishlisted(data.action === "added");
-      toast.add({ type: "success", title: data.action === "added" ? "Added to wishlist" : "Removed from wishlist" });
+      if (data.message === "Added to wishlist") {
+        setIsWishlisted(true);
+        toast.add({ type: "success", title: "Added to wishlist" });
+      } else if (data.message === "Removed from wishlist") {
+        setIsWishlisted(false);
+        toast.add({ type: "success", title: "Removed from wishlist" });
+      }
     } else {
       const err = (await res.json())?.error || { message: "Wishlist update failed" };
       toast.add({ type: "error", title: "Wishlist update failed", description: err.message });
@@ -78,7 +73,6 @@ export default function StudioCard({ studio, href, className }: StudioCardProps)
         className
       )}
     >
-      {/* Media */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-900">
         <Image
           key={image}
@@ -118,7 +112,6 @@ export default function StudioCard({ studio, href, className }: StudioCardProps)
         </span>
       </div>
 
-      {/* Details */}
       <div className="flex flex-1 flex-col p-5">
         <div className="flex items-center justify-between gap-3">
           {rating && (

@@ -13,11 +13,11 @@ const quickLinks = [
 ];
 
 const categories = [
-  { name: "Photo Studios", href: "/studios?category=photo" },
-  { name: "Sound Stages", href: "/studios?category=sound" },
-  { name: "Podcast Rooms", href: "/studios?category=podcast" },
-  { name: "Music Suites", href: "/studios?category=music" },
-  { name: "Art Workshops", href: "/studios?category=art" },
+  { name: "Photo Studios", href: "/studios?category=Photo%20Studios" },
+  { name: "Sound Stages", href: "/studios?category=Sound%20Stages" },
+  { name: "Podcast Rooms", href: "/studios?category=Podcast%20Rooms" },
+  { name: "Music Suites", href: "/studios?category=Music%20Suites" },
+  { name: "Art Workshops", href: "/studios?category=Art%20Workshops" },
 ];
 
 const socials = [
@@ -104,6 +104,7 @@ export default function Footer() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/newsletter`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include", // 👈 session cookie is included for the newsletter request
         body: JSON.stringify({ email }),
       });
       if (res.ok) {
@@ -125,7 +126,6 @@ export default function Footer() {
     <footer className="w-full border-t border-gray-200 bg-gray-50 text-gray-900 transition-colors duration-200 dark:border-white/5 dark:bg-[#0a0a0a] dark:text-white">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1.6fr]">
-          {/* Brand */}
           <div>
             <Link href="/" className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#8b5cf6] shadow-md shadow-purple-500/20">
@@ -171,7 +171,6 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Quick Links */}
           <nav aria-label="Quick links">
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white">
               Quick Links
@@ -190,7 +189,6 @@ export default function Footer() {
             </ul>
           </nav>
 
-          {/* Categories */}
           <nav aria-label="Studio categories">
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white">
               Categories
@@ -209,7 +207,6 @@ export default function Footer() {
             </ul>
           </nav>
 
-          {/* Newsletter */}
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white">
               Production Dispatch
@@ -255,7 +252,6 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Bottom Bar */}
         <div className="mt-14 flex flex-col gap-4 border-t border-gray-200 pt-8 sm:flex-row sm:items-center sm:justify-between dark:border-white/5">
           <p className="text-sm text-gray-500">
             © 2026 Creativo Technologies, Inc. All rights reserved.

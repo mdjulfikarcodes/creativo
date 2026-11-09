@@ -19,14 +19,12 @@ export default function HomePage() {
         <FeaturedStudios />
       </Suspense>
 
-      {/* ১. How It Works সেকশনে id দাও */}
       <div id="how-it-works">
         <HowBookingWorks />
       </div>
 
       <HostGuarantee />
 
-      {/* ২. About Us সেকশনে id দাও */}
       <div id="about">
         <AboutPage />
       </div>

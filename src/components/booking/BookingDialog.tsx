@@ -1,14 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  AlertCircle,
-  CalendarDays,
-  CalendarPlus,
-  Clock,
-  Loader2,
-} from "lucide-react";
+import { AlertCircle, CalendarDays, CalendarPlus, Clock, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,13 +15,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
-import { useSession, authClient } from "@/lib/auth-client"; // 👈 authClient ইম্পোর্ট করা হলো
-import {
-  calculateHours,
-  formatBookingDate,
-  formatPrice,
-  getApiBaseUrl,
-} from "@/lib/booking";
 
 type BookingDialogProps = {
   studioId: string;
@@ -46,8 +33,6 @@ export default function BookingDialog({
   hourlyRate,
 }: BookingDialogProps) {
   const router = useRouter();
-  const { data: session } = useSession();
-  const userEmail = session?.user?.email ?? "";
 
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState("");
@@ -57,25 +42,22 @@ export default function BookingDialog({
   const [conflict, setConflict] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const hours = useMemo(
-    () => calculateHours(startTime, endTime),
-    [startTime, endTime],
-  );
-  const totalPrice = useMemo(
-    () => Math.round(hours * hourlyRate * 100) / 100,
-    [hours, hourlyRate],
-  );
-
   const handleOpenChange = (nextOpen: boolean) => {
     if (submitting) return;
-
     setOpen(nextOpen);
-
     if (nextOpen) {
       setError(null);
       setConflict(false);
     }
   };
+
+  function getDurationHours(): number {
+    const start = startTime.split(":").map(Number);
+    const end = endTime.split(":").map(Number);
+    const startMinutes = start[0] * 60 + start[1];
+    const endMinutes = end[0] * 60 + end[1];
+    return endMinutes > startMinutes ? (endMinutes - startMinutes) / 60 : 0;
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,6 +75,7 @@ export default function BookingDialog({
       return;
     }
 
+    const hours = getDurationHours();
     if (hours <= 0) {
       setError("End time must be later than the start time.");
       return;
@@ -108,39 +91,17 @@ export default function BookingDialog({
       return;
     }
 
-    if (!userEmail) {
-      setError("Please sign in to book this workspace.");
-      toast.add({
-        type: "error",
-        title: "Sign in required",
-        description: "Please sign in to book this workspace.",
-      });
-      return;
-    }
-
-    const baseUrl = getApiBaseUrl();
-    if (!baseUrl) {
-      setError("Booking API is not configured. Set NEXT_PUBLIC_SERVER_BASE_URL.");
-      return;
-    }
-
+    const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL || "http://localhost:5000";
+    
     setSubmitting(true);
 
     try {
-      const { data: tokenData } = await authClient.token();
-      const token = tokenData?.token;
-
-      if (!token) {
-        throw new Error("Authentication token not found. Please log in again.");
-      }
-
       const response = await fetch(`${baseUrl}/booking`, {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           studioId,
@@ -149,7 +110,7 @@ export default function BookingDialog({
           date,
           startTime,
           endTime,
-          totalPrice,
+          totalPrice: Math.round(hours * hourlyRate * 100) / 100,
         }),
       });
 
@@ -186,7 +147,7 @@ export default function BookingDialog({
       toast.add({
         type: "success",
         title: "Booking request sent",
-        description: `${studioTitle} on ${formatBookingDate(date)} is awaiting host approval.`,
+        description: `${studioTitle} on ${date} is awaiting host approval.`,
       });
 
       setOpen(false);
@@ -197,7 +158,6 @@ export default function BookingDialog({
         err instanceof Error
           ? err.message
           : "Something went wrong while booking this studio.";
-
       setError(message);
       toast.add({
         type: "error",
@@ -229,17 +189,14 @@ export default function BookingDialog({
             <DialogDescription className="text-sm text-gray-400">
               {studioTitle} ·{" "}
               <span className="font-medium text-violet-400">
-                {formatPrice(hourlyRate)} BDT/hr
+                {Math.round(hourlyRate * 100) / 100} BDT/hr
               </span>
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label
-                htmlFor="booking-date"
-                className="text-xs font-medium text-gray-300"
-              >
+              <label htmlFor="booking-date" className="text-xs font-medium text-gray-300">
                 Date
               </label>
               <div className="relative">
@@ -257,10 +214,7 @@ export default function BookingDialog({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label
-                  htmlFor="booking-start-time"
-                  className="text-xs font-medium text-gray-300"
-                >
+                <label htmlFor="booking-start-time" className="text-xs font-medium text-gray-300">
                   Start time
                 </label>
                 <div className="relative">
@@ -277,10 +231,7 @@ export default function BookingDialog({
               </div>
 
               <div className="space-y-1.5">
-                <label
-                  htmlFor="booking-end-time"
-                  className="text-xs font-medium text-gray-300"
-                >
+                <label htmlFor="booking-end-time" className="text-xs font-medium text-gray-300">
                   End time
                 </label>
                 <div className="relative">
@@ -301,13 +252,13 @@ export default function BookingDialog({
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-400">Duration</span>
                 <span className="font-medium text-white">
-                  {hours > 0 ? `${formatPrice(hours)} hrs` : "—"}
+                  {getDurationHours() > 0 ? `${getDurationHours()} hrs` : "—"}
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between text-sm">
                 <span className="text-gray-400">Hourly rate</span>
                 <span className="font-medium text-white">
-                  {formatPrice(hourlyRate)} BDT
+                  {Math.round(hourlyRate * 100) / 100} BDT
                 </span>
               </div>
               <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
@@ -315,17 +266,14 @@ export default function BookingDialog({
                   Total price
                 </span>
                 <span className="text-lg font-bold text-violet-300">
-                  {formatPrice(totalPrice)}{" "}
+                  {Math.round(getDurationHours() * hourlyRate * 100) / 100}
                   <span className="text-xs font-semibold">BDT</span>
                 </span>
               </div>
             </div>
 
             {conflict && (
-              <div
-                role="alert"
-                className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300"
-              >
+              <div role="alert" className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <div>
                   <p className="font-medium">Time slot already booked</p>
@@ -337,10 +285,7 @@ export default function BookingDialog({
             )}
 
             {error && !conflict && (
-              <div
-                role="alert"
-                className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300"
-              >
+              <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>{error}</p>
               </div>

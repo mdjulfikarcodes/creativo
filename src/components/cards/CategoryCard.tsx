@@ -8,7 +8,7 @@ import {
 
 export type CategoryCardProps = {
   category: StudioCategory;
-  /** Overrides the default `/studios?category=[slug]` destination. */
+  /** Overrides the default `/studios?category=[title]` destination. */
   href?: string;
   className?: string;
 };
@@ -22,7 +22,7 @@ export default function CategoryCard({
 
   return (
     <Link
-      href={href ?? getCategoryHref(category.slug)}
+      href={href ?? getCategoryHref(category.title)}
       className={cn(
         "group flex flex-col items-center rounded-xl border border-gray-200 bg-white px-5 py-8 text-center transition-all hover:border-violet-500/50 hover:shadow-md dark:border-white/5 dark:bg-[#121212] dark:hover:border-white/10 dark:hover:bg-[#151515]",
         className

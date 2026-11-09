@@ -5,7 +5,6 @@ import { buttonVariants } from "@/components/ui/button";
 export default function NotFound() {
   return (
     <div className="flex min-h-[80vh] flex-col items-center justify-center px-4 text-center">
-      {/* ক্রিয়েটিভ ইলাস্ট্রেশন */}
       <div className="relative mb-8">
         <div className="absolute inset-0 -z-10 blur-3xl">
           <div className="mx-auto h-32 w-32 rounded-full bg-violet-500/30" />

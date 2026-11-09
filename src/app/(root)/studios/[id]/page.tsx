@@ -79,14 +79,15 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
   unstable_noStore();
   const studio = await getStudioData(id);
 
-  if (!studio) redirect("/dashboard/my-listings");
+  // Real page is /dashboard/my-studio; /dashboard/my-listings does not exist
+  if (!studio) redirect("/dashboard/my-studio");
 
   const imageUrl = studio.imageUrl || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04";
   const images = Array.isArray((studio as any).images) ? (studio as any).images : [imageUrl];
   const title = studio.title || "Untitled Studio";
   const category = studio.category || "Studio";
   
-  // 👇 রেটিং এবং রিভিউ ডাইনামিক করা হয়েছে
+  // Rating and reviews are dynamic
   const rating = studio.rating ? Number(studio.rating).toFixed(1) : "New";
   const reviews = studio.reviews || 0;
   const reviewList = (studio as any).reviewList || [];
@@ -181,7 +182,6 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
             </div>
           )}
 
-          {/* 👇 কাস্টমার রিভিউ সেকশন */}
           <div className="mt-10 border-t border-gray-200 pt-8 dark:border-white/5">
             <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">Customer Reviews</h2>
             <div className="space-y-4">

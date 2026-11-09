@@ -17,4 +17,5 @@ export type Studio = {
   reviewList?: { user: string; rating: number; comment: string }[];
   price?: number | string;
   amenities?: string[] | string;
+  ownerEmail?: string;
 };

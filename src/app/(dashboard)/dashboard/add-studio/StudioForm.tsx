@@ -21,8 +21,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/toast";
-import { getBearerToken, useSession } from "@/lib/auth-client";
+import { toast as sonnerToast } from "sonner";
+import { useSession } from "@/lib/auth-client";
 import { getStudioById } from "@/lib/studios";
+import type { Studio } from "@/lib/types";
 
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
@@ -46,11 +48,12 @@ const PRESET_IMAGES = [
   { id: "5", url: "https://images.unsplash.com/photo-1514195037031-83d60ed3b448?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D", label: "Art Workshops" },
 ];
 
-export default function StudioForm() {
+export default function StudioForm({ initialStudio }: { initialStudio?: Studio } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const editId = searchParams.get("edit");
-  const isEdit = Boolean(editId);
+  const urlEditId = searchParams.get("edit");
+  const studioId = initialStudio?._id || initialStudio?.id || urlEditId || "";
+  const isEdit = Boolean(studioId);
 
   const { data: session } = useSession();
   const email = session?.user?.email ?? "";
@@ -59,7 +62,7 @@ export default function StudioForm() {
   const [loadingStudio, setLoadingStudio] = useState(isEdit);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -85,12 +88,13 @@ const [uploading, setUploading] = useState(false);
     };
   }, []);
 
-  useEffect(() => {
-    if (!editId) return;
+  const loadStudioFromUrl = () => {
+    if (!urlEditId) return;
 
     let active = true;
+    setLoadingStudio(true);
 
-    getStudioById(editId)
+    getStudioById(urlEditId)
       .then((studio) => {
         if (!active) return;
 
@@ -131,7 +135,38 @@ const [uploading, setUploading] = useState(false);
     return () => {
       active = false;
     };
-  }, [editId, form]);
+  };
+
+  useEffect(() => {
+    // When initialStudio is provided (edit page), pre-fill directly without fetching.
+    if (initialStudio) {
+      const amenities = Array.isArray(initialStudio.amenities)
+        ? initialStudio.amenities
+        : typeof initialStudio.amenities === "string"
+          ? initialStudio.amenities.split(",").map((item) => item.trim()).filter(Boolean)
+          : [];
+
+      const toFieldValue = (value: unknown) =>
+        value === undefined || value === null ? "" : String(value);
+
+      form.reset({
+        title: initialStudio.title ?? "",
+        category: initialStudio.category ?? "",
+        location: initialStudio.location ?? "",
+        overview: initialStudio.overview ?? initialStudio.description ?? "",
+        hourlyRate: toFieldValue(initialStudio.hourlyRate),
+        securityDeposit: toFieldValue(initialStudio.securityDeposit),
+        maxCapacity: toFieldValue(initialStudio.maxCapacity),
+        imageUrl: initialStudio.imageUrl ?? initialStudio.image ?? "",
+        amenities,
+      });
+      setLoadingStudio(false);
+      return;
+    }
+
+    // Otherwise load from the URL ?edit= query param (add-studio page).
+    return loadStudioFromUrl();
+  }, [initialStudio, urlEditId, form]);
 
   const AMENITIES = [
     "3-Wall Infinity Cyclorama", "Profoto Lighting Rig",
@@ -159,12 +194,10 @@ const [uploading, setUploading] = useState(false);
         hourlyRate: Number(values.hourlyRate),
         securityDeposit: Number(values.securityDeposit),
         maxCapacity: Number(values.maxCapacity),
-        ...(email ? { ownerEmail: email, hostEmail: email } : {}),
         ...(hostName ? { hostName } : {}),
       };
 
-      const endpoint = isEdit && editId ? `${baseUrl}/studio/${encodeURIComponent(editId)}` : `${baseUrl}/studio`;
-      const token = await getBearerToken();
+      const endpoint = isEdit && studioId ? `${baseUrl}/studio/${encodeURIComponent(studioId)}` : `${baseUrl}/studio`;
 
       const result = await fetch(endpoint, {
         method: isEdit ? "PATCH" : "POST",
@@ -173,12 +206,9 @@ const [uploading, setUploading] = useState(false);
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(payload),
       });
-
-      console.log("Response status:", result.status);
 
       if (result.status === 401) {
         toast.add({ type: "error", title: "Session expired", description: "Session expired. Please sign in again." });
@@ -196,8 +226,8 @@ const [uploading, setUploading] = useState(false);
         title: isEdit ? "Studio updated" : "Studio published",
         description: isEdit ? "Your studio listing has been updated successfully." : "Your studio listing has been created successfully.",
       });
-      router.push("/dashboard/my-studio");
-      router.refresh();
+
+      await router.push("/dashboard/my-studio");
     } catch (error) {
       toast.add({
         type: "error",
@@ -397,31 +427,30 @@ const [uploading, setUploading] = useState(false);
                           const formData = new FormData();
                           formData.append("image", file);
                           const baseUrl = (process.env.NEXT_PUBLIC_SERVER_BASE_URL ?? "").replace(/\/+$/, "");
-                          const token = await getBearerToken();
                           const res = await fetch(`${baseUrl}/upload`, {
                             method: "POST",
                             credentials: "include",
-                            headers: { Authorization: `Bearer ${token}` },
+                            headers: {},
                             body: formData,
                           });
                           const data = await res.json();
-                          if (data.success) {
-                            form.setValue("imageUrl", data.data.url);
-                            toast.add({ type: "success", title: "Image uploaded" });
+                          if (res.ok && data?.url) {
+                            form.setValue("imageUrl", data.url);
+                            sonnerToast("Image uploaded");
                           } else {
-                            toast.add({ type: "error", title: "Image upload failed" });
+                            sonnerToast.error("Upload failed");
                           }
                         } catch {
-                          toast.add({ type: "error", title: "Image upload failed" });
+                          sonnerToast.error("Upload failed");
                         } finally {
                           setUploading(false);
                         }
                       }}
                     />
-                      {uploading && (
-                        <Loader2 className="animate-spin h-4 w-4 text-violet-600" />
-                      )}
-                    </div>
+                    {uploading && (
+                      <Loader2 className="animate-spin h-4 w-4 text-violet-600" />
+                    )}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -477,11 +506,7 @@ const [uploading, setUploading] = useState(false);
                             return (
                               <FormItem
                                 key={item}
-                                className={`flex flex-row items-center space-x-3 space-y-0 rounded-lg border p-3 cursor-pointer transition-colors ${
-                                  field.value?.includes(item)
-                                    ? "bg-primary/10 border-primary text-primary"
-                                    : "bg-background border-border text-muted-foreground hover:border-muted-foreground"
-                                }`}
+                                className={`flex flex-row items-center space-x-3 space-y-0 rounded-lg border p-3 cursor-pointer transition-colors ${field.value?.includes(item) ? "bg-primary/10 border-primary text-primary" : "bg-background border-border text-muted-foreground hover:border-muted-foreground"}`}
                                 onClick={() => {
                                   const current = field.value || [];
                                   const updated = current.includes(item)
@@ -539,7 +564,7 @@ const [uploading, setUploading] = useState(false);
               </Button>
               <Button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || uploading}
                 className="bg-violet-600 hover:bg-violet-700 text-white min-w-[150px] gap-2"
               >
                 {submitting ? (

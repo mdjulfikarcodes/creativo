@@ -1,5 +1,3 @@
-import { getApiBaseUrl } from "@/lib/booking";
-import { getBearerToken } from "@/lib/auth-client";
 import type { Studio } from "@/lib/types";
 
 export type StudioInput = {
@@ -25,16 +23,15 @@ async function readErrorMessage(
 }
 
 function requireBaseUrl(): string {
-  const baseUrl = getApiBaseUrl();
+  const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
   if (!baseUrl) {
     throw new Error(
       "Studio API is not configured. Set NEXT_PUBLIC_SERVER_BASE_URL in .env.local.",
     );
   }
-  return baseUrl;
+  return baseUrl.replace(/\/+$/, "");
 }
 
-/** Studio lookup query that works with Mongo ObjectIds and custom string ids. */
 function studioUrl(baseUrl: string, id: string): string {
   return `${baseUrl}/studio/${encodeURIComponent(id)}`;
 }
@@ -48,7 +45,6 @@ function toStudio(value: unknown): Studio | null {
   return studio._id || studio.id || studio.title ? studio : null;
 }
 
-/** Normalizes the different list shapes returned by the Express API. */
 export function parseStudioList(payload: unknown): Studio[] {
   if (Array.isArray(payload)) {
     return payload
@@ -66,7 +62,6 @@ export function parseStudioList(payload: unknown): Studio[] {
   return [];
 }
 
-/** Normalizes the different single-studio shapes returned by the Express API. */
 export function extractStudio(payload: unknown): Studio | null {
   const direct = toStudio(payload);
   if (direct) return direct;
@@ -87,30 +82,22 @@ export function extractStudio(payload: unknown): Studio | null {
   return null;
 }
 
-/** Loads every studio owned by the signed-in host. */
-export async function getMyStudios(
-  ownerEmail: string,
-  signal?: AbortSignal,
-): Promise<Studio[]> {
+export async function getMyStudios(ownerEmail: string): Promise<Studio[]> {
   const baseUrl = requireBaseUrl();
 
-  if (!ownerEmail) {
+  const cleanEmail = String(ownerEmail || "").trim().toLowerCase();
+
+  if (!cleanEmail) {
     throw new Error("Please sign in to manage your studios.");
   }
 
-  const token = await getBearerToken();
-
   const response = await fetch(
-    `${baseUrl}/studio?ownerEmail=${encodeURIComponent(ownerEmail)}`,
+    `${baseUrl}/studio?ownerEmail=${encodeURIComponent(cleanEmail)}`,
     {
       method: "GET",
       credentials: "include",
       cache: "no-store",
-      headers: {
-        Accept: "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      signal,
+      headers: { Accept: "application/json" },
     },
   );
 
@@ -119,15 +106,12 @@ export async function getMyStudios(
   }
 
   if (!response.ok) {
-    throw new Error(
-      await readErrorMessage(response, "Failed to load your studios"),
-    );
+    throw new Error(await readErrorMessage(response, "Failed to load your studios"));
   }
 
   return parseStudioList(await response.json());
 }
 
-/** Loads a single studio, used to pre-fill the edit form. */
 export async function getStudioById(id: string): Promise<Studio | null> {
   const baseUrl = requireBaseUrl();
 
@@ -141,21 +125,17 @@ export async function getStudioById(id: string): Promise<Studio | null> {
   if (response.status === 404) return null;
 
   if (!response.ok) {
-    throw new Error(
-      await readErrorMessage(response, "Failed to load this studio"),
-    );
+    throw new Error(await readErrorMessage(response, "Failed to load this studio"));
   }
 
   return extractStudio(await response.json());
 }
 
-/** Updates an existing studio listing. */
 export async function updateStudio(
   id: string,
   values: StudioInput,
 ): Promise<Studio | null> {
   const baseUrl = requireBaseUrl();
-  const token = await getBearerToken();
 
   const response = await fetch(studioUrl(baseUrl, id), {
     method: "PATCH",
@@ -164,39 +144,29 @@ export async function updateStudio(
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(values),
   });
 
   if (!response.ok) {
-    throw new Error(
-      await readErrorMessage(response, "Failed to update studio"),
-    );
+    throw new Error(await readErrorMessage(response, "Failed to update studio"));
   }
 
   const payload = await response.json().catch(() => null);
   return extractStudio(payload);
 }
 
-/** Permanently deletes a studio listing. */
 export async function deleteStudio(id: string): Promise<void> {
   const baseUrl = requireBaseUrl();
-  const token = await getBearerToken();
 
   const response = await fetch(studioUrl(baseUrl, id), {
     method: "DELETE",
     credentials: "include",
     cache: "no-store",
-    headers: {
-      Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: { Accept: "application/json" },
   });
 
   if (!response.ok) {
-    throw new Error(
-      await readErrorMessage(response, "Failed to delete studio"),
-    );
+    throw new Error(await readErrorMessage(response, "Failed to delete studio"));
   }
 }

@@ -1,13 +1,12 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { connection } from "next/server"; // 👈 নতুন যোগ করা হলো
+import { connection } from "next/server";
 import StudioCard from "@/components/cards/StudioCard";
 import SectionHeading from "@/components/shared/SectionHeading";
 import { parseStudioList } from "@/lib/studios";
 import type { Studio } from "@/lib/types";
 
-// ১. মেইন কম্পোনেন্ট (সিঙ্ক্রোনাস)
 export default function FeaturedStudios() {
   return (
     <section
@@ -33,7 +32,6 @@ export default function FeaturedStudios() {
           }
         />
 
-        {/* ২. Suspense বাউন্ডারি */}
         <Suspense fallback={<FeaturedStudiosSkeleton />}>
           <FeaturedStudiosList />
         </Suspense>
@@ -42,10 +40,8 @@ export default function FeaturedStudios() {
   );
 }
 
-// ৩. ডাটা ফেচিং কম্পোনেন্ট (async)
 async function FeaturedStudiosList() {
-  // 👇 এই লাইনটি Next.js-কে বলে দেয় যে এটি ডাইনামিক ডাটা
-  await connection(); 
+  await connection();
 
   let studiosList: Studio[] = [];
 
@@ -58,7 +54,6 @@ async function FeaturedStudiosList() {
       studiosList = parseStudioList(data).slice(0, 6);
     }
   } catch (error) {
-    console.error("Failed to fetch featured studios:", error);
   }
 
   if (studiosList.length === 0) {
@@ -78,7 +73,6 @@ async function FeaturedStudiosList() {
   );
 }
 
-// ৪. লোডিং স্কেলেটন
 function FeaturedStudiosSkeleton() {
   return (
     <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 animate-pulse">

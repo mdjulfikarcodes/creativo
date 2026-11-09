@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils"; 
-import { ArrowLeft, CalendarCheck, Camera, PlusCircle, LayoutDashboard } from "lucide-react"; 
+import { cn } from "@/lib/utils";
+import { ArrowLeft, CalendarCheck, Camera, PlusCircle, LayoutDashboard } from "lucide-react";
 
 const navItems = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
@@ -16,7 +16,6 @@ const Sidebar = () => {
   const pathname = usePathname();
 
   return (
-    // 👇 bg-background এবং border-border ব্যবহার করা হলো
     <aside className="flex h-full w-[250px] shrink-0 flex-col border-r border-border bg-background px-4">
       
       <p className="mt-8 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -38,7 +37,7 @@ const Sidebar = () => {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-primary/10 text-primary" // 👈 Shadcn এর প্রাইমারি কালার
+                  ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >

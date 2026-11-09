@@ -25,7 +25,6 @@ export default function HostGuarantee() {
           ))}
         </div>
 
-        {/* Host CTA Banner */}
         <div className="mt-16 flex flex-col gap-8 rounded-2xl bg-[#7c3aed] px-8 py-10 sm:px-12 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl">
             <h2 className="text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl">
@@ -38,7 +37,7 @@ export default function HostGuarantee() {
           </div>
 
           <Link
-            href="/host"
+            href="/dashboard/add-studio"
             className="shrink-0 self-start rounded-lg bg-[#171717] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-black lg:self-auto"
           >
             List Your Studio Now

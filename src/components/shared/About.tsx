@@ -51,7 +51,6 @@ export default function AboutPage() {
     <div className="min-h-screen bg-white dark:bg-[#0a0a0a] py-16 md:py-24 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-20">
         
-        {/* Mission Hero */}
         <div className="max-w-3xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-50 dark:bg-violet-950/40 text-[#8b5cf6] text-xs font-semibold">
             <Sparkles className="h-3.5 w-3.5" />
@@ -67,7 +66,6 @@ export default function AboutPage() {
           </p>
         </div>
 
-        {/* Stats Strip */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-8 rounded-2xl border border-gray-100 dark:border-white/10 bg-[#F8F9FB] dark:bg-white/5 text-center">
           <div>
             <div className="text-3xl font-extrabold text-[#8b5cf6] tabular-nums">480+</div>
@@ -87,7 +85,6 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* Core Principles */}
         <div className="space-y-8">
           <div className="text-center max-w-xl mx-auto">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
@@ -118,7 +115,6 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* Leadership Team */}
         <div className="space-y-8">
           <div className="text-center max-w-xl mx-auto">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
@@ -160,7 +156,6 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* Call to action */}
         <div className="rounded-2xl bg-gray-950 text-white p-8 sm:p-12 text-center space-y-6 border border-white/10">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Ready to find your next shoot location?

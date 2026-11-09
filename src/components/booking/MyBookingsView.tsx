@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+// src/components/booking/MyBookingsView.tsx
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // 👈 নতুন ইম্পোর্ট
+import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   CalendarDays,
@@ -15,7 +17,10 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { jsPDF } from "jspdf";
+
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +32,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { Textarea } from "@/components/ui/textarea";
-import { useSession, getBearerToken } from "@/lib/auth-client";
+import { useSession } from "@/lib/auth-client";
 import {
   fetchMyBookings,
   formatBookingDate,
@@ -77,7 +82,8 @@ function BookingsSkeleton() {
   );
 }
 
-const STUDIO_IMAGE_FALLBACK = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=800&auto=format&fit=crop";
+const STUDIO_IMAGE_FALLBACK =
+  "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=800&auto=format&fit=crop";
 
 function BookingStudioImage({ src, alt }: { src: string; alt: string }) {
   const [imageSrc, setImageSrc] = useState(src);
@@ -97,110 +103,173 @@ function BookingStudioImage({ src, alt }: { src: string; alt: string }) {
   );
 }
 
+function downloadInvoice(booking: Booking) {
+  try {
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.text("Creativo Booking Invoice", 20, 20);
+    doc.setFontSize(12);
+    doc.text(`Studio: ${booking.studioName}`, 20, 40);
+    doc.text(`Date: ${formatBookingDate(booking.date)}`, 20, 52);
+    doc.text(`Time: ${formatBookingTimeRange(booking)}`, 20, 64);
+    doc.text(`Total: ${formatPrice(booking.totalPrice)} BDT`, 20, 76);
+    doc.text(`Booking ID: ${booking.id}`, 20, 88);
+    doc.text("Thank you for booking with Creativo.", 20, 104);
+    doc.save(`invoice-${booking.id}.pdf`);
+    toast.add({ type: "success", title: "Invoice downloaded" });
+  } catch {
+    toast.add({ type: "error", title: "Invoice failed" });
+  }
+}
+
+function BookingActions({
+  booking,
+  onConfirm,
+  onCancel,
+  onReview,
+  onInvoice,
+}: {
+  booking: Booking;
+  onConfirm: () => void;
+  onCancel: () => void;
+  onReview: () => void;
+  onInvoice: () => void;
+}) {
+  return (
+    <div
+      className="flex flex-col items-start gap-4 border-t border-gray-200 pt-4 dark:border-white/5 sm:items-end sm:border-t-0 sm:border-l sm:pt-0 sm:pl-5"
+    >
+      <div className="sm:text-right">
+        <p className="text-[11px] font-medium tracking-wide text-gray-500 uppercase">
+          Total Price
+        </p>
+        <p className="flex items-baseline gap-1 text-xl font-bold text-gray-900 dark:text-white sm:justify-end">
+          {formatPrice(booking.totalPrice)}
+          <span className="text-xs font-semibold text-violet-500 dark:text-violet-400">
+            BDT
+          </span>
+        </p>
+      </div>
+
+      {booking.status === "Pending" && (
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            onClick={onConfirm}
+            className="h-9 bg-emerald-600 text-white hover:bg-emerald-700"
+          >
+            <CheckCircle className="h-4 w-4 mr-1.5" />
+            Confirm
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onCancel}
+            className="h-9 border-gray-200 bg-white text-gray-700 hover:border-rose-500/40 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+          >
+            <XCircle className="h-4 w-4 mr-1.5" />
+            Cancel
+          </Button>
+        </div>
+      )}
+      {booking.status === "Completed" && !booking.review && (
+        <Button type="button" size="sm" onClick={onReview}>
+          Leave a Review
+        </Button>
+      )}
+      {booking.review && (
+        <div className="text-sm">
+          {[...Array(booking.review.rating)].map(() => "★").join(" ")}
+          {booking.review.comment}
+        </div>
+      )}
+      {booking.status === "Confirmed" && (
+        <Button type="button" size="sm" onClick={onInvoice}>
+          Download Invoice
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export default function MyBookingsView() {
-  const router = useRouter(); // 👈 রাউটার ইনিশিয়ালাইজ
+  const router = useRouter();
   const { data: session, isPending: sessionPending } = useSession();
-  const email = session?.user?.email ?? "";
+  const userEmail = session?.user?.email ?? "";
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Cancel স্টেট
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
-  const [cancelling, setCancelling] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
-  // Confirm স্টেট
   const [confirmTarget, setConfirmTarget] = useState<Booking | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
-  // Review 상태
-  const [reviewTarget, setReviewTarget] = useState<Booking | null>(null);
-  const [reviewRating, setReviewRating] = useState("5");
-  const [reviewComment, setReviewComment] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [review, setReview] = useState({
+    target: null as Booking | null,
+    rating: 5,
+    comment: "",
+    isSubmitting: false,
+  });
 
-  const fetchBookings = useCallback(async () => {
-    if (!email) {
-      setError("Please sign in to view your bookings.");
+  async function loadBookings() {
+    if (sessionPending || !userEmail) {
       setLoading(false);
       return;
     }
 
     try {
-      const nextBookings = await fetchMyBookings(email);
-      setBookings(nextBookings);
+      setLoading(true);
+      setError(null);
+
+      const fetchedBookings = await fetchMyBookings();
+
+      const safeBookings = userEmail
+        ? fetchedBookings.filter(
+            (b) =>
+              true,
+          )
+        : [];
+
+      setBookings(safeBookings);
       setError(null);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load your bookings.",
+        err instanceof Error ? err.message : "Failed to load bookings.",
       );
     } finally {
       setLoading(false);
     }
-  }, [email]);
-
-  const refreshBookings = () => {
-    setLoading(true);
-    setError(null);
-    void fetchBookings();
-  };
+  }
 
   useEffect(() => {
-    if (sessionPending || !email) return;
+    loadBookings();
+  }, [sessionPending, userEmail]);
 
-    const controller = new AbortController();
-    let active = true;
-
-    fetchMyBookings(email, controller.signal)
-      .then((nextBookings) => {
-        if (!active) return;
-        setBookings(nextBookings);
-        setError(null);
-      })
-      .catch((err: unknown) => {
-        if (!active || controller.signal.aborted) return;
-        setError(
-          err instanceof Error ? err.message : "Failed to load your bookings.",
-        );
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [email, sessionPending]);
-
-  const closeConfirmDialog = () => {
-    if (confirming) return;
-    setConfirmTarget(null);
-    setConfirmError(null);
+  const refreshBookings = () => {
+    loadBookings();
   };
 
-  // Confirm হ্যান্ডলার
   async function handleConfirmBooking() {
     if (!confirmTarget) return;
-    setConfirming(true);
+    setIsConfirming(true);
     setConfirmError(null);
 
     try {
       const baseUrl = getApiBaseUrl();
-      const token = await getBearerToken();
       const response = await fetch(
         `${baseUrl}/booking/${encodeURIComponent(confirmTarget.id)}/confirm`,
         {
           method: "PATCH",
           credentials: "include",
           cache: "no-store",
-          headers: {
-            Accept: "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
+          headers: { Accept: "application/json" },
         },
       );
 
@@ -219,25 +288,15 @@ export default function MyBookingsView() {
         description: `${confirmTarget.studioName} is now confirmed.`,
       });
 
-      const confirmedId = confirmTarget.id;
       setConfirmTarget(null);
       setConfirmError(null);
-      setBookings((prev) =>
-        prev.map((b) =>
-          b.id === confirmedId ? { ...b, status: "Confirmed" } : b,
-        ),
-      );
 
-      // 👇 ড্যাশবোর্ডের My Bookings পেজে রিডাইরেক্ট
-      router.push("/dashboard/my-bookings");
-      router.refresh();
-
+      await loadBookings();
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
           : "Something went wrong while confirming this booking.";
-
       setConfirmError(message);
       toast.add({
         type: "error",
@@ -245,27 +304,29 @@ export default function MyBookingsView() {
         description: message,
       });
     } finally {
-      setConfirming(false);
+      setIsConfirming(false);
     }
   }
 
   async function handleSubmitReview() {
-    if (!reviewTarget) return;
-    setSubmitting(true);
+    if (!review.target) return;
+    const targetBooking = review.target;
+    setReview((prev) => ({ ...prev, isSubmitting: true }));
+
     try {
-      const token = await getBearerToken();
       const res = await fetch(
-        `${getApiBaseUrl()}/studio/${encodeURIComponent(reviewTarget.studioId || reviewTarget.id)}/review`,
+        `${getApiBaseUrl()}/studio/${encodeURIComponent(
+          targetBooking.studioId || targetBooking.id,
+        )}/review`,
         {
           method: "POST",
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
-            rating: Number(reviewRating),
-            comment: reviewComment,
+            rating: Number(review.rating),
+            comment: review.comment,
           }),
         },
       );
@@ -277,13 +338,24 @@ export default function MyBookingsView() {
         description: "Thank you for your feedback!",
       });
 
-      setReviewTarget(null);
-      setReviewRating("5");
-      setReviewComment("");
+      setReview((prev) => ({
+        ...prev,
+        target: null,
+        rating: 5,
+        comment: "",
+        isSubmitting: false,
+      }));
+
       setBookings((prev) =>
         prev.map((b) =>
-          b.id === reviewTarget.id
-            ? { ...b, review: { rating: Number(reviewRating), comment: reviewComment } }
+          b.id === targetBooking.id
+            ? {
+                ...b,
+                review: {
+                  rating: Number(review.rating),
+                  comment: review.comment,
+                },
+              }
             : b,
         ),
       );
@@ -294,35 +366,41 @@ export default function MyBookingsView() {
         description: err instanceof Error ? err.message : "",
       });
     } finally {
-      setSubmitting(false);
+      setReview((prev) => ({ ...prev, isSubmitting: false }));
     }
   }
 
   const closeCancelDialog = () => {
-    if (cancelling) return;
+    if (isCancelling) return;
     setCancelTarget(null);
     setCancelError(null);
+  };
+
+  const closeConfirmDialog = () => {
+    if (isConfirming) return;
+    setConfirmTarget(null);
+    setConfirmError(null);
+  };
+
+  const closeReviewDialog = () => {
+    setReview((prev) => ({ ...prev, target: null }));
   };
 
   async function handleCancelBooking() {
     if (!cancelTarget) return;
     const booking = cancelTarget;
-    setCancelling(true);
+    setIsCancelling(true);
     setCancelError(null);
 
     try {
       const baseUrl = getApiBaseUrl();
-      const token = await getBearerToken();
       const response = await fetch(
         `${baseUrl}/booking/${encodeURIComponent(booking.id)}/cancel`,
         {
           method: "PATCH",
           credentials: "include",
           cache: "no-store",
-          headers: {
-            Accept: "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
+          headers: { Accept: "application/json" },
         },
       );
 
@@ -342,17 +420,11 @@ export default function MyBookingsView() {
       });
 
       setCancelTarget(null);
-      setBookings((prevBookings) =>
-        prevBookings.map((b) =>
-          b.id === booking.id ? { ...b, status: "Cancelled" } : b,
-        ),
-      );
+
+      await loadBookings();
     } catch (err) {
       const message =
-        err instanceof Error
-          ? err.message
-          : "Something went wrong while cancelling this booking.";
-
+        err instanceof Error ? err.message : "Something went wrong while cancelling this booking.";
       setCancelError(message);
       toast.add({
         type: "error",
@@ -360,73 +432,86 @@ export default function MyBookingsView() {
         description: message,
       });
     } finally {
-      setCancelling(false);
+      setIsCancelling(false);
     }
   }
 
-  const signInError =
-    !sessionPending && !email ? "Please sign in to view your bookings." : null;
+  const signInError = !sessionPending && !userEmail ? "Please sign in to view your bookings." : null;
   const displayError = error ?? signInError;
-  const showSkeleton =
-    (sessionPending || (loading && Boolean(email))) && bookings.length === 0;
+
+  const showSkeleton = loading && bookings.length === 0;
+
+  const showLoginCTA = !sessionPending && !userEmail && !error && bookings.length === 0 && !loading;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 text-gray-900 dark:text-white">
-      <header className="flex flex-col gap-4 border-b border-gray-200 pb-6 dark:border-white/5 md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-              My Bookings
-            </h1>
-            {!loading && bookings.length > 0 && (
-              <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-300">
-                {bookings.length} {bookings.length === 1 ? "booking" : "bookings"}
-              </span>
-            )}
+      {showLoginCTA && (
+        <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center dark:border-white/5 dark:bg-[#121212]">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400">
+            <AlertCircle className="h-7 w-7" />
           </div>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 md:text-base">
-            Track your studio sessions, approval status, and total booking cost.
+          <h2 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
+            Please sign in to view your bookings
+          </h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-gray-500 dark:text-gray-400">
+            You need to be logged in to see your studio bookings.
           </p>
         </div>
+      )}
 
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={refreshBookings}
-            disabled={loading}
-            className="h-10 border-gray-200 bg-white text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-          <Link
-            href="/studios"
-            className={buttonVariants({
-              className: "h-10 bg-violet-600 text-white hover:bg-violet-700 transition-colors",
-            })}
-          >
-            Explore Studios
-          </Link>
-        </div>
-      </header>
+      {!showLoginCTA && (
+        <header className="flex flex-col gap-4 border-b border-gray-200 pb-6 dark:border-white/5 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+                My Bookings
+              </h1>
+              {!loading && bookings.length > 0 && (
+                <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-300">
+                  {bookings.length}
+                  {bookings.length === 1 ? "booking" : "bookings"}
+                </span>
+              )}
+            </div>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 md:text-base">
+              Track your studio sessions, approval status, and total booking cost.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={refreshBookings}
+              disabled={loading}
+              className="h-10 border-gray-200 bg-white text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            <Link
+              href="/studios"
+              className="h-10 bg-violet-600 text-white hover:bg-violet-700 transition-colors px-4 py-2 rounded-lg font-medium"
+            >
+              Explore Studios
+            </Link>
+          </div>
+        </header>
+      )}
 
-      {displayError && !showSkeleton && (
+      {displayError && !showSkeleton && !showLoginCTA && (
         <div className="flex flex-col gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-600 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <AlertCircle className="h-5 w-5 shrink-0" />
             <p className="text-sm">{displayError}</p>
           </div>
-          {email && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={refreshBookings}
-              className="h-9 border-rose-500/30 bg-transparent text-rose-600 hover:bg-rose-500/15 dark:text-rose-200 dark:hover:text-white"
-            >
-              Try again
-            </Button>
-          )}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={refreshBookings}
+            className="h-9 border-rose-500/30 bg-transparent text-rose-600 hover:bg-rose-500/15 dark:text-rose-200 dark:hover:text-white"
+          >
+            Try again
+          </Button>
         </div>
       )}
 
@@ -441,7 +526,10 @@ export default function MyBookingsView() {
             >
               <div className="flex flex-col gap-5 p-4 sm:flex-row sm:items-center sm:p-5">
                 <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-white/5 dark:bg-white/5 sm:h-28 sm:w-40">
-                  <BookingStudioImage src={booking.image} alt={booking.studioName} />
+                  <BookingStudioImage
+                    src={booking.image}
+                    alt={booking.studioName}
+                  />
                 </div>
 
                 <div className="min-w-0 flex-1 space-y-3">
@@ -449,7 +537,7 @@ export default function MyBookingsView() {
                     <h2 className="truncate text-lg font-semibold text-gray-900 dark:text-white">
                       {booking.studioName}
                     </h2>
-                    <StatusBadge status={booking.status} />
+                    <StatusBadge status={booking.status as BookingStatus} />
                   </div>
 
                   <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
@@ -464,134 +552,51 @@ export default function MyBookingsView() {
                   </div>
                   {booking.review && (
                     <div className="text-sm">
-                      {[...Array(booking.review.rating)]
-                        .map(() => "★")
-                        .join(" ")}
-                      {booking.review.comment}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col items-start gap-4 border-t border-gray-200 pt-4 dark:border-white/5 sm:items-end sm:border-t-0 sm:border-l sm:pt-0 sm:pl-5">
-                  <div className="sm:text-right">
-                    <p className="text-[11px] font-medium tracking-wide text-gray-500 uppercase">
-                      Total Price
-                    </p>
-                    <p className="flex items-baseline gap-1 text-xl font-bold text-gray-900 dark:text-white sm:justify-end">
-                      {formatPrice(booking.totalPrice)}
-                      <span className="text-xs font-semibold text-violet-500 dark:text-violet-400">
-                        BDT
-                      </span>
-                    </p>
-                  </div>
-
-                  {booking.status === "Pending" && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => setConfirmTarget(booking)}
-                        className="h-9 bg-emerald-600 text-white hover:bg-emerald-700"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1.5" />
-                        Confirm
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setCancelError(null);
-                          setCancelTarget(booking);
-                        }}
-                        className="h-9 border-gray-200 bg-white text-gray-700 hover:border-rose-500/40 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
-                      >
-                        <XCircle className="h-4 w-4 mr-1.5" />
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
-                  {booking.status === "Completed" && !booking.review && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => setReviewTarget(booking)}
-                    >
-                      Leave a Review
-                    </Button>
-                  )}
-                  {booking.review && (
-                    <div className="text-sm">
                       {[...Array(booking.review.rating)].map(() => "★").join(" ")}
                       {booking.review.comment}
                     </div>
                   )}
-                  {booking.status === "Confirmed" && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={async () => {
-                        try {
-                          const { jsPDF } = await import("jspdf");
-                          const doc = new jsPDF();
-                          doc.setFontSize(20);
-                          doc.text("Creativo Booking Invoice", 20, 20);
-                          doc.setFontSize(12);
-                          doc.text(`Studio: ${booking.studioName}`, 20, 40);
-                          doc.text(`Date: ${formatBookingDate(booking.date)}`, 20, 52);
-                          doc.text(`Time: ${formatBookingTimeRange(booking)}`, 20, 64);
-                          doc.text(`Total: ${formatPrice(booking.totalPrice)} BDT`, 20, 76);
-                          doc.text(`Booking ID: ${booking.id}`, 20, 88);
-                          doc.text("Thank you for booking with Creativo.", 20, 104);
-                          doc.save(`invoice-${booking.id}.pdf`);
-                          toast.add({ type: "success", title: "Invoice downloaded" });
-                        } catch {
-                          toast.add({ type: "error", title: "Invoice failed" });
-                        }
-                      }}
-                    >
-                      Download Invoice
-                    </Button>
-                  )}
                 </div>
+
+                <BookingActions
+                  booking={booking}
+                  onConfirm={() => setConfirmTarget(booking)}
+                  onCancel={() => {
+                    setCancelError(null);
+                    setCancelTarget(booking);
+                  }}
+                  onReview={() => setReview((prev) => ({ ...prev, target: booking }))}
+                  onInvoice={() => downloadInvoice(booking)}
+                />
               </div>
             </article>
           ))}
         </div>
       )}
 
-      {!showSkeleton && !displayError && bookings.length === 0 && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center dark:border-white/5 dark:bg-[#121212]">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400">
-            <CalendarX2 className="h-7 w-7" />
-          </div>
-          <h2 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">No bookings yet</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-gray-500 dark:text-gray-400">
-            You have not booked any creative studio sessions yet. Find a space and
-            lock in your next production.
-          </p>
-          <Link
-            href="/studios"
-            className={buttonVariants({
-              className: "mt-6 h-10 bg-violet-600 text-white hover:bg-violet-700 transition-colors",
-            })}
-          >
-            Explore Studios
-          </Link>
-        </div>
+      {!showSkeleton && !displayError && bookings.length === 0 && !showLoginCTA && (
+        <EmptyState
+          icon={CalendarX2}
+          title="No bookings yet"
+          description="You have not booked any creative studio sessions yet. Find a space and lock in your next production."
+          ctaLabel="Explore Studios"
+          ctaHref="/studios"
+        />
       )}
 
-      {/* Cancel Dialog */}
       <Dialog
         open={cancelTarget !== null}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) closeCancelDialog();
         }}
       >
-        <DialogContent className="border border-gray-200 bg-white text-gray-900 dark:border-white/10 dark:bg-[#121212] dark:text-white sm:max-w-md">
+        <DialogContent
+          className="border border-gray-200 bg-white text-gray-900 dark:border-white/10 dark:bg-[#121212] dark:text-white sm:max-w-md"
+        >
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">Cancel this booking?</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">
+              Cancel this booking?
+            </DialogTitle>
             <DialogDescription className="text-sm text-gray-500 dark:text-gray-400">
               {cancelTarget
                 ? `${cancelTarget.studioName} on ${formatBookingDate(cancelTarget.date)} (${formatBookingTimeRange(cancelTarget)}) will be released. This cannot be undone.`
@@ -610,7 +615,7 @@ export default function MyBookingsView() {
             <Button
               type="button"
               variant="outline"
-              disabled={cancelling}
+              disabled={isCancelling}
               onClick={closeCancelDialog}
               className="h-10 border-gray-200 bg-transparent text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
             >
@@ -618,11 +623,11 @@ export default function MyBookingsView() {
             </Button>
             <Button
               type="button"
-              disabled={cancelling}
+              disabled={isCancelling}
               onClick={() => void handleCancelBooking()}
               className="h-10 gap-2 bg-rose-600 text-white hover:bg-rose-700"
             >
-              {cancelling ? (
+              {isCancelling ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Cancelling...
@@ -638,16 +643,19 @@ export default function MyBookingsView() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirm Dialog */}
       <Dialog
         open={confirmTarget !== null}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) closeConfirmDialog();
         }}
       >
-        <DialogContent className="border border-gray-200 bg-white text-gray-900 dark:border-white/10 dark:bg-[#121212] dark:text-white sm:max-w-md">
+        <DialogContent
+          className="border border-gray-200 bg-white text-gray-900 dark:border-white/10 dark:bg-[#121212] dark:text-white sm:max-w-md"
+        >
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">Confirm this booking?</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">
+              Confirm this booking?
+            </DialogTitle>
             <DialogDescription className="text-sm text-gray-500 dark:text-gray-400">
               {confirmTarget
                 ? `Are you sure you want to confirm the booking for ${confirmTarget.studioName}?`
@@ -666,19 +674,22 @@ export default function MyBookingsView() {
             <Button
               type="button"
               variant="outline"
-              disabled={confirming}
-              onClick={closeConfirmDialog}
+              disabled={isConfirming}
+              onClick={() => {
+                setConfirmTarget(null);
+                setConfirmError(null);
+              }}
               className="h-10 border-gray-200 bg-transparent text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
             >
               Cancel
             </Button>
             <Button
               type="button"
-              disabled={confirming}
+              disabled={isConfirming}
               onClick={() => void handleConfirmBooking()}
               className="h-10 gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
             >
-              {confirming ? (
+              {isConfirming ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Confirming...
@@ -694,18 +705,17 @@ export default function MyBookingsView() {
         </DialogContent>
       </Dialog>
 
-      {/* Review Dialog */}
       <Dialog
-        open={reviewTarget !== null}
+        open={review.target !== null}
         onOpenChange={(nextOpen) => {
-          if (!nextOpen) setReviewTarget(null);
+          if (!nextOpen) closeReviewDialog();
         }}
       >
-        <DialogContent className="border border-gray-200 bg-white text-gray-900 dark:border-white/10 dark:bg-[#121212] dark:text-white sm:max-w-md">
+        <DialogContent
+          className="border border-gray-200 bg-white text-gray-900 dark:border-white/10 dark:bg-[#121212] dark:text-white sm:max-w-md"
+        >
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">
-              Write a Review
-            </DialogTitle>
+            <DialogTitle className="text-lg font-semibold">Write a Review</DialogTitle>
           </DialogHeader>
 
           <div className="flex gap-2 mb-4">
@@ -713,10 +723,8 @@ export default function MyBookingsView() {
               <Button
                 key={i}
                 size="sm"
-                variant={
-                  reviewRating === String(i) ? "default" : "outline"
-                }
-                onClick={() => setReviewRating(String(i))}
+                variant={review.rating === i ? "default" : "outline"}
+                onClick={() => setReview((prev) => ({ ...prev, rating: i }))}
               >
                 {i}
               </Button>
@@ -724,8 +732,10 @@ export default function MyBookingsView() {
           </div>
 
           <Textarea
-            value={reviewComment}
-            onChange={(e) => setReviewComment(e.target.value)}
+            value={review.comment}
+            onChange={(e) =>
+              setReview((prev) => ({ ...prev, comment: e.target.value }))
+            }
             placeholder="Add a comment"
             className="mb-4"
           />
@@ -734,26 +744,24 @@ export default function MyBookingsView() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setReviewTarget(null)}
+              onClick={() => closeReviewDialog()}
               className="h-10 border-gray-200 bg-transparent text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
             >
               Cancel
             </Button>
             <Button
               type="button"
-              disabled={submitting}
+              disabled={review.isSubmitting}
               onClick={() => void handleSubmitReview()}
               className="h-10 gap-2 bg-violet-600 text-white hover:bg-violet-700"
             >
-              {submitting ? (
+              {review.isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Submitting...
                 </>
               ) : (
-                <>
-                  Submit Review
-                </>
+                <>Submit Review</>
               )}
             </Button>
           </DialogFooter>

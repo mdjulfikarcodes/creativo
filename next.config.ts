@@ -9,6 +9,36 @@ const nextConfig: NextConfig = {
   },
   cacheComponents: true,
   partialPrefetching: true,
+
+  // Redirects
+  redirects: async () => [
+    {
+      source: "/my-listings",
+      destination: "/dashboard/my-studio",
+      permanent: false,
+    },
+    {
+      source: "/add-studio",
+      destination: "/dashboard/add-studio",
+      permanent: false,
+    },
+    {
+      source: "/my-bookings",
+      destination: "/dashboard/my-bookings",
+      permanent: false,
+    },
+  ],
+
+  // Better Auth Proxy (3000 -> 5000)
+  async rewrites() {
+    return [
+      {
+        source: "/api/auth/:path*",
+        destination: `${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/api/auth/:path*`,
+      },
+    ];
+  },
+
   turbopack: {
     rules: {
       "*.css": {
@@ -17,7 +47,7 @@ const nextConfig: NextConfig = {
       },
     },
   },
-  
+
   images: {
     remotePatterns: [
       {
@@ -56,10 +86,10 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/**",
       },
-      // 👇 বিকল্প হিসেবে যেকোনো হোস্ট থেকে ইমেজ লোড করার অনুমতি (ভবিষ্যতের জন্য)
+      // Allow images from any host
       {
         protocol: "https",
-        hostname: "**", // যেকোনো ওয়েবসাইট থেকে ইমেজ লোড করবে
+        hostname: "**",
         port: "",
         pathname: "/**",
       },

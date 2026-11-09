@@ -4,7 +4,7 @@ import { MongoClient, type Db } from "mongodb";
 const uri = process.env.MONGO_URI;
 
 if (!uri) {
-  throw new Error("❌ MONGO_URI is missing in .env file");
+  throw new Error("MONGO_URI is missing in .env file");
 }
 
 let client: MongoClient;

@@ -9,15 +9,13 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  // 👇 ক্লায়েন্ট সাইডে মাউন্ট হওয়ার পর থিম চেক করবে
+  // Theme is only known after hydration; render the skeleton until then.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
-    // Theme is only known after hydration; render the skeleton until then.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
   if (!mounted) {
-    // সার্ভার সাইডে প্রথমবার রেন্ডার হওয়ার সময় মাউন্ট না হওয়া পর্যন্ত এটি দেখাবে
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a]">
         <div className="h-20 w-full bg-white dark:bg-[#0a0a0a] border-b border-gray-200 dark:border-white/5" />

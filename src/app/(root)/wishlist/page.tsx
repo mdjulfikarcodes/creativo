@@ -4,29 +4,40 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart, Loader2 } from "lucide-react";
 import StudioCard from "@/components/cards/StudioCard";
-import { getBearerToken } from "@/lib/auth-client";
 import type { Studio } from "@/lib/types";
 
 export default function WishlistPage() {
   const [studios, setStudios] = useState<Studio[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
     if (!baseUrl) return setLoading(false);
-    (async () => {
-      const token = await getBearerToken();
-      const res = await fetch(`${baseUrl}/wishlist`, {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include",
+
+    setLoading(true);
+    setError(null);
+
+    fetch(`${baseUrl}/wishlist`, {
+      credentials: "include",
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load wishlist");
+        return res.json();
+      })
+      .then((data) => {
+        setStudios(Array.isArray(data) ? data : []);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Failed to load wishlist.");
+      })
+      .finally(() => {
+        setLoading(false);
       });
-      const data = await res.json();
-      setStudios(Array.isArray(data) ? data : []);
-      setLoading(false);
-    })();
   }, []);
 
-  if (loading)
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] p-6">
         <h1 className="text-2xl font-bold mb-6">Wishlist</h1>
@@ -36,6 +47,18 @@ export default function WishlistPage() {
         </div>
       </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] p-6">
+        <h1 className="text-2xl font-bold mb-6">Wishlist</h1>
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 text-center">
+          <p className="text-rose-600 dark:text-rose-300 text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] p-6">
