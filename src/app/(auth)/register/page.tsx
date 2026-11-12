@@ -59,8 +59,13 @@ export default function RegisterPage() {
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "http://localhost:3000/",
+        // 👇 লাইভ এবং লোকালহোস্ট দুই জায়গায় কাজ করার জন্য ডাইনামিক করা হলো
+        callbackURL: window.location.origin, 
       });
+
+      // 👇 Google থেকে ফিরে আসার পর UI আপডেট করার জন্য রিফ্রেশ
+      router.refresh();
+      
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Google sign-up failed.";
       toast.error(message);
@@ -186,7 +191,6 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-           
             className="mt-2 w-full rounded-xl bg-linear-to-r from-[#8b5cf6] to-[#7c3aed] py-3.5 text-sm font-bold text-white shadow-lg shadow-[#8b5cf6]/30 transition-all hover:scale-[1.02] hover:shadow-[#8b5cf6]/50 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-70"
           >
             {loading ? (

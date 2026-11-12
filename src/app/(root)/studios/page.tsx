@@ -7,7 +7,7 @@ import { Search } from "lucide-react";
 import StudioCard from "@/components/cards/StudioCard";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
-import { Button } from "@/components/ui/button"; // 👈 বাটনের জন্য ইম্পোর্ট
+import { Button } from "@/components/ui/button";
 
 type Studio = {
   _id?: string;
@@ -181,7 +181,7 @@ function StudiosList() {
     );
   };
 
-  // 👇 Clear Filters ফাংশন তৈরি করা হলো
+
   const handleClearFilters = () => {
     setSearchInput("");
     setDebouncedSearch("");
@@ -189,7 +189,7 @@ function StudiosList() {
     setPrice("");
     setCapacity("");
     setCategory("");
-    router.push("/studios"); // URL রিসেট
+    router.push("/studios");
   };
 
   if (error) {
@@ -214,7 +214,7 @@ function StudiosList() {
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No studios match your search</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Try adjusting your filters or search terms.</p>
         
-        {/* 👇 কাস্টম Clear Filters বাটন যুক্ত করা হলো */}
+        
         <Button 
           onClick={handleClearFilters}
           className="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white px-6 py-2"

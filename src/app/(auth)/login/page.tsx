@@ -20,7 +20,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
- 
       const { error } = await authClient.signIn.email({
         email,
         password,
@@ -47,8 +46,13 @@ export default function LoginPage() {
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "http://localhost:3000/",
+        // 👇 লাইভ এবং লোকালহোস্ট দুই জায়গায় কাজ করার জন্য ডাইনামিক করা হলো
+        callbackURL: window.location.origin, 
       });
+
+      // 👇 Google থেকে ফিরে আসার পর UI আপডেট করার জন্য রিফ্রেশ
+      router.refresh();
+      
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Google sign-in failed.";
       toast.error(message);
@@ -59,16 +63,12 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gray-50 p-4 dark:bg-[#050505]">
-
       <div className="absolute top-[-10%] left-[-10%] h-[40%] w-[40%] rounded-full bg-[#8b5cf6]/20 blur-[120px] dark:bg-[#8b5cf6]/10 pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-blue-500/20 blur-[120px] dark:bg-blue-500/10 pointer-events-none" />
 
       <div className="z-10 w-full max-w-md rounded-3xl border border-white/20 bg-white/70 p-8 shadow-2xl backdrop-blur-xl dark:border-white/5 dark:bg-[#121212]/80 dark:shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
-
-  
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-        
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-[#8b5cf6] to-[#6d28d9] shadow-lg shadow-[#8b5cf6]/30">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
@@ -89,7 +89,6 @@ export default function LoginPage() {
         </h1>
 
         <form onSubmit={handleLogin} className="space-y-4 mb-6">
-       
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
               Email Address
@@ -107,7 +106,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-        
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
@@ -146,7 +144,6 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-    
             className="mt-2 w-full rounded-xl bg-linear-to-r from-[#8b5cf6] to-[#7c3aed] py-3.5 text-sm font-bold text-white shadow-lg shadow-[#8b5cf6]/30 transition-all hover:scale-[1.02] hover:shadow-[#8b5cf6]/50 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-70"
           >
             {loading ? (
@@ -160,9 +157,12 @@ export default function LoginPage() {
           </button>
         </form>
 
-       
         <div className="relative mb-6">
           <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-gray-200 dark:border-white/10"></span>
+            <span className="px-4 text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500 bg-white/70 dark:bg-[#121212] backdrop-blur-xl">
+              Or continue with
+            </span>
           </div>
         </div>
 
@@ -172,7 +172,6 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-[#1a1a1a] py-3 flex items-center justify-center gap-3 text-sm font-semibold text-gray-700 dark:text-gray-200 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-[#2a2a2a] hover:shadow-md disabled:opacity-70"
         >
-
           <Image
             src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
             alt="Google Logo"
