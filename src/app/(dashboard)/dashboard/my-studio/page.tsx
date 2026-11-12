@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react"; 
 import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "next-themes";
@@ -11,8 +11,59 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
 import { useSession } from "@/lib/auth-client";
-import { deleteStudio, getMyStudios } from "@/lib/studios";
-import type { Studio } from "@/lib/types";
+
+type Studio = {
+  _id?: string;
+  id?: string;
+  title?: string;
+  category?: string;
+  location?: string;
+  overview?: string;
+  description?: string;
+  imageUrl?: string;
+  image?: string;
+  hourlyRate?: number | string;
+  securityDeposit?: number | string;
+  maxCapacity?: number | string;
+  capacity?: number | string;
+  rating?: number | string;
+  reviews?: number | string;
+  reviewList?: { user: string; rating: number; comment: string }[];
+  price?: number | string;
+  amenities?: string[] | string;
+  ownerEmail?: string;
+};
+
+async function fetchMyStudios(ownerEmail: string): Promise<Studio[]> {
+  const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
+  if (!baseUrl) return [];
+  try {
+    const res = await fetch(
+      `${baseUrl}/studio?ownerEmail=${encodeURIComponent(ownerEmail)}`,
+      {
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : data?.data || data?.studios || [];
+  } catch {
+    return [];
+  }
+}
+
+async function deleteStudio(id: string): Promise<void> {
+  const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
+  if (!baseUrl) return;
+  await fetch(`${baseUrl}/studio/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    credentials: "include",
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+}
 
 const FALLBACK_STUDIO_IMAGE =
   "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=200&auto=format&fit=crop";
@@ -55,7 +106,8 @@ export default function MyStudioListings() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  async function loadStudios(): Promise<void> {
+
+  const loadStudios = useCallback(async (): Promise<void> => {
     if (sessionPending || !userEmail) {
       setLoading(false);
       return;
@@ -65,24 +117,26 @@ export default function MyStudioListings() {
     setError(null);
 
     try {
-      const studioList = await getMyStudios(userEmail);
-
-      const safeList = studioList.filter(
-        (studio) => String(studio.ownerEmail || "").trim().toLowerCase() === userEmail
-      );
-
-      setStudios(safeList);
+      console.log("My Studio - Fetching for Email:", userEmail);
+      const studioList = await fetchMyStudios(userEmail);
+      console.log("My Studio - Fetched Data:", studioList);
+      setStudios(studioList);
       setError(null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load your studios.");
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    loadStudios();
   }, [userEmail, sessionPending]);
+
+ 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadStudios();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [loadStudios]);
 
   const refresh = async (): Promise<void> => {
     await loadStudios();
@@ -110,7 +164,6 @@ export default function MyStudioListings() {
 
     try {
       await deleteStudio(id);
-
       toast.add({
         type: "success",
         title: "Studio deleted",

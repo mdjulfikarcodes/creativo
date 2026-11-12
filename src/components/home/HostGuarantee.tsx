@@ -2,7 +2,29 @@ import Link from "next/link";
 
 import { GuaranteeCard } from "@/components/cards";
 import SectionHeading from "@/components/shared/SectionHeading";
-import { guarantees } from "@/lib/data/content";
+
+const guarantees = [
+  {
+    title: "BDT 3.5M Liability Protection",
+    description:
+      "Every reservation is safeguarded against property damage and third-party liabilities at no extra charge.",
+  },
+  {
+    title: "Verified Hosts & Creators",
+    description:
+      "Identity verification, equipment inspection checks, and community reviews keep our creative network trusted.",
+  },
+  {
+    title: "Certified Gear & Specs",
+    description:
+      "Every lighting rig, cyc wall, and power drop is verified for real production load tolerances.",
+  },
+  {
+    title: "24/7 Production Support",
+    description:
+      "Our dedicated studio concierge is on standby during your active call sheet to resolve access or gear needs.",
+  },
+];
 
 export default function HostGuarantee() {
   return (

@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
+import { authClient, useSession } from "@/lib/auth-client";
 
 type BookingDialogProps = {
   studioId: string;
@@ -41,6 +42,8 @@ export default function BookingDialog({
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const { data: session, isPending: sessionPending } = useSession();
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (submitting) return;
@@ -91,17 +94,23 @@ export default function BookingDialog({
       return;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL || "http://localhost:5000";
     
+    const { data } = await authClient.token();
+    const token = data?.token;
+    const baseUrl = (process.env.NEXT_PUBLIC_SERVER_BASE_URL ?? "").replace(
+      /\/+$/,
+      ""
+    );
+
     setSubmitting(true);
 
     try {
       const response = await fetch(`${baseUrl}/booking`, {
         method: "POST",
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}), 
         },
         body: JSON.stringify({
           studioId,
@@ -284,7 +293,21 @@ export default function BookingDialog({
               </div>
             )}
 
-            {error && !conflict && (
+            {sessionPending && (
+              <div className="flex items-center gap-2 text-sm text-gray-400 mb-3">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Checking session...</span>
+              </div>
+            )}
+
+            {!sessionPending && !session?.user && (
+              <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>Please sign in to book this workspace.</p>
+              </div>
+            )}
+
+            {error && !conflict && !session?.user && (
               <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>{error}</p>
@@ -303,7 +326,7 @@ export default function BookingDialog({
               </Button>
               <Button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || !session?.user || sessionPending}
                 className="h-10 gap-2 bg-[#8b5cf6] text-white hover:bg-[#7c3aed]"
               >
                 {submitting ? (

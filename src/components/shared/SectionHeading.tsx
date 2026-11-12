@@ -5,10 +5,10 @@ export type SectionHeadingProps = {
   eyebrow: string;
   title: string;
   description?: string;
-  /** Used as the `id` on the heading so sections can reference it via aria-labelledby. */
+
   id?: string;
   align?: "center" | "left";
-  /** Optional action (e.g. a "View all" link) placed opposite the heading on larger screens. */
+
   action?: ReactNode;
   className?: string;
 };

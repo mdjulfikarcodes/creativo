@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Star } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
+import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import { getApiBaseUrl } from "@/lib/booking";
 
 type WriteReviewFormProps = {
   studioId: string;
@@ -20,15 +20,22 @@ export default function WriteReviewForm({ studioId }: WriteReviewFormProps) {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const baseUrl = getApiBaseUrl();
+      const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
+      const { data } = await authClient.token();
+      const token = data?.token;
       const res = await fetch(`${baseUrl}/studio/${studioId}/review`, {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ rating: Number(rating), comment }),
       });
+      if (res.status === 401) {
+        toast.add({ type: "error", title: "Sign in required", description: "Please sign in to submit a review." });
+        return;
+      }
       if (!res.ok) throw new Error("Failed to submit review");
       toast.add({ type: "success", title: "Review Submitted", description: "Thank you for your feedback!" });
       setRating(5);

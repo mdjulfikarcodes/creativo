@@ -1,9 +1,7 @@
 import { cn } from "cn";
 
-import type { Step } from "@/lib/data/content";
-
 export type StepCardProps = {
-  step: Step;
+  step: { number: string; title: string; description: string };
   className?: string;
 };
 
@@ -15,7 +13,7 @@ export default function StepCard({ step, className }: StepCardProps) {
         className
       )}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 rounded-t-2xl bg-gradient-to-b from-white/[0.03] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 rounded-t-2xl bg-linear-to-b from-white/3 to-transparent" />
 
       <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-[#8b5cf6] text-lg font-bold text-white shadow-lg shadow-[#8b5cf6]/25 ring-1 ring-white/10">
         {step.number}

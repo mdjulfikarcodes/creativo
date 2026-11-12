@@ -1,9 +1,7 @@
 import { cn } from "cn";
 
-import type { Guarantee } from "@/lib/data/content";
-
 export type GuaranteeCardProps = {
-  guarantee: Guarantee;
+  guarantee: { title: string; description: string };
   className?: string;
 };
 
@@ -11,8 +9,6 @@ export default function GuaranteeCard({
   guarantee,
   className,
 }: GuaranteeCardProps) {
-  const Icon = guarantee.icon;
-
   return (
     <article
       className={cn(
@@ -20,10 +16,6 @@ export default function GuaranteeCard({
         className
       )}
     >
-      <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#8b5cf6]/30 bg-[#8b5cf6]/10 text-[#8b5cf6]">
-        <Icon className="h-5 w-5" strokeWidth={1.75} />
-      </span>
-
       <h3 className="mt-6 text-base font-bold text-gray-900 dark:text-white">
         {guarantee.title}
       </h3>

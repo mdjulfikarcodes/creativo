@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
 import { ArrowLeft, CalendarCheck, Camera, PlusCircle, LayoutDashboard } from "lucide-react";
 
 const navItems = [
@@ -16,8 +15,8 @@ const Sidebar = () => {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-[250px] shrink-0 flex-col border-r border-border bg-background px-4">
-      
+    <aside className="flex h-full w-62.5 shrink-0 flex-col border-r border-border bg-background px-4">
+
       <p className="mt-8 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Dashboard
       </p>
@@ -34,18 +33,13 @@ const Sidebar = () => {
               key={href}
               href={href}
               aria-current={isActive ? "page" : undefined}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${isActive
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
             >
               <Icon
-                className={cn(
-                  "h-5 w-5",
-                  isActive ? "text-primary" : "text-muted-foreground"
-                )}
+                className={`h-5 w-5 ${isActive ? "text-primary" : "text-muted-foreground"}`}
               />
               {name}
             </Link>

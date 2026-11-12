@@ -1,13 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { cn } from "cn";
 import { Heart, MapPin, Star, Users } from "lucide-react";
 import { toast } from "@/components/ui/toast";
-import type { Studio } from "@/lib/types";
+import { authClient } from "@/lib/auth-client"; // 👈 authClient সরাসরি ইম্পোর্ট করা হলো
+
+type Studio = {
+  _id?: string;
+  id?: string;
+  title?: string;
+  category?: string;
+  location?: string;
+  overview?: string;
+  description?: string;
+  imageUrl?: string;
+  image?: string;
+  hourlyRate?: number | string;
+  securityDeposit?: number | string;
+  maxCapacity?: number | string;
+  capacity?: number | string;
+  rating?: number | string;
+  reviews?: number | string;
+  reviewList?: { user: string; rating: number; comment: string }[];
+  price?: number | string;
+  amenities?: string[] | string;
+  ownerEmail?: string;
+};
 
 export type StudioCardProps = {
   studio: Studio;
@@ -16,7 +37,6 @@ export type StudioCardProps = {
 };
 
 export default function StudioCard({ studio, href, className }: StudioCardProps) {
-  const router = useRouter();
   const studioHref = href ?? `/studios/${studio._id || studio.id}`;
   const image = studio.imageUrl || studio.image || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04";
   const price = studio.hourlyRate || studio.price || 0;
@@ -24,45 +44,47 @@ export default function StudioCard({ studio, href, className }: StudioCardProps)
   const rating = studio.rating ? Number(studio.rating).toFixed(1) : null;
   const latestReview = studio.reviewList?.[0];
 
+  // উইশলিস্ট স্টেট
   const [isWishlisted, setIsWishlisted] = useState(false);
-
-  useEffect(() => {
-    const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
-    if (!baseUrl) return;
-    (async () => {
-      const res = await fetch(`${baseUrl}/wishlist/${studio._id}`, {
-        credentials: "include",
-      });
-      if (res.ok) {
-        const d = await res.json();
-        setIsWishlisted(!!d?.isWishlisted);
-      }
-    })();
-  }, [studio._id]);
 
   const toggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
     if (!baseUrl) return;
-    const res = await fetch(`${baseUrl}/wishlist`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studioId: String(studio._id || studio.id) }),
-      credentials: "include",
-    });
-    const data = await res.json();
-    if (res.ok) {
-      if (data.message === "Added to wishlist") {
-        setIsWishlisted(true);
-        toast.add({ type: "success", title: "Added to wishlist" });
-      } else if (data.message === "Removed from wishlist") {
-        setIsWishlisted(false);
-        toast.add({ type: "success", title: "Removed from wishlist" });
+
+    try {
+      // 👇 Better Auth টোকেন নেওয়া (সঠিক পদ্ধতি)
+      const { data } = await authClient.token();
+      const token = data?.token;
+
+      const res = await fetch(`${baseUrl}/wishlist`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}), // 👈 শুধু Bearer টোকেন
+        },
+        // ❌ credentials: "include" সরিয়ে দেওয়া হলো
+        body: JSON.stringify({ studioId: String(studio._id || studio.id) }),
+      });
+
+      if (res.status === 401) {
+        toast.add({ type: "error", title: "Please login first" });
+        return;
       }
-    } else {
-      const err = (await res.json())?.error || { message: "Wishlist update failed" };
-      toast.add({ type: "error", title: "Wishlist update failed", description: err.message });
+
+      if (res.ok) {
+        setIsWishlisted(!isWishlisted);
+        toast.add({
+          type: "success",
+          title: isWishlisted ? "Removed from wishlist" : "Added to wishlist",
+        });
+      } else {
+        toast.add({ type: "error", title: "Wishlist update failed" });
+      }
+    } catch (error) {
+      toast.add({ type: "error", title: "Something went wrong" });
     }
   };
 

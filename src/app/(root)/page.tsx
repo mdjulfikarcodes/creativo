@@ -9,7 +9,7 @@ import AboutPage from "@/components/shared/about";
 export default function HomePage() {
   return (
     <>
-      <Suspense fallback={<div className="w-full h-[85vh] min-h-[600px] bg-black animate-pulse" />}>
+      <Suspense fallback={<div className="w-full h-[85vh] min-h-150 bg-black animate-pulse" />}>
         <HeroSlider />
       </Suspense>
 

@@ -1,13 +1,85 @@
-import { Suspense } from "react";
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { connection } from "next/server";
 import StudioCard from "@/components/cards/StudioCard";
 import SectionHeading from "@/components/shared/SectionHeading";
-import { parseStudioList } from "@/lib/studios";
-import type { Studio } from "@/lib/types";
+
+type Studio = {
+  _id?: string;
+  id?: string;
+  title?: string;
+  category?: string;
+  location?: string;
+  overview?: string;
+  description?: string;
+  imageUrl?: string;
+  image?: string;
+  hourlyRate?: number | string;
+  securityDeposit?: number | string;
+  maxCapacity?: number | string;
+  capacity?: number | string;
+  rating?: number | string;
+  reviews?: number | string;
+  reviewList?: { user: string; rating: number; comment: string }[];
+  price?: number | string;
+  amenities?: string[] | string;
+  ownerEmail?: string;
+};
 
 export default function FeaturedStudios() {
+  const [studios, setStudios] = useState<Studio[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadStudios() {
+      const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
+      if (!baseUrl) {
+        setError("Server URL is not configured.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch(`${baseUrl}/studio?limit=6`, {
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to load studios");
+        }
+
+        const data = await res.json();
+        const list = Array.isArray(data)
+          ? data
+          : data?.data || data?.studios || [];
+
+        if (!cancelled) {
+          setStudios(list.slice(0, 6));
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError("Failed to load studios");
+          setLoading(false);
+        }
+      }
+    }
+
+    loadStudios();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <section
       id="featured-studios"
@@ -32,53 +104,34 @@ export default function FeaturedStudios() {
           }
         />
 
-        <Suspense fallback={<FeaturedStudiosSkeleton />}>
-          <FeaturedStudiosList />
-        </Suspense>
+        {loading && (
+          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 animate-pulse">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-80 rounded-2xl bg-gray-100 dark:bg-[#121212]" />
+            ))}
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-12 text-center py-10 text-red-500 dark:text-rose-400">
+            <p>{error}</p>
+          </div>
+        )}
+
+        {!loading && !error && studios.length === 0 && (
+          <div className="mt-12 text-center text-gray-500 py-10">
+            No featured studios available at the moment.
+          </div>
+        )}
+
+        {!loading && !error && studios.length > 0 && (
+          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {studios.map((studio) => (
+              <StudioCard key={studio._id || studio.id} studio={studio} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
-  );
-}
-
-async function FeaturedStudiosList() {
-  await connection();
-
-  let studiosList: Studio[] = [];
-
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL || "http://localhost:5000";
-    const res = await fetch(`${baseUrl}/studio`, { next: { revalidate: 60 } });
-
-    if (res.ok) {
-      const data = await res.json();
-      studiosList = parseStudioList(data).slice(0, 6);
-    }
-  } catch (error) {
-  }
-
-  if (studiosList.length === 0) {
-    return (
-      <div className="mt-12 text-center text-gray-500 py-10">
-        No featured studios available at the moment.
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {studiosList.map((studio) => (
-        <StudioCard key={studio._id || studio.id} studio={studio} />
-      ))}
-    </div>
-  );
-}
-
-function FeaturedStudiosSkeleton() {
-  return (
-    <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 animate-pulse">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="h-80 rounded-2xl bg-gray-100 dark:bg-[#121212]" />
-      ))}
-    </div>
   );
 }

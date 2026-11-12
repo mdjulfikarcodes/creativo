@@ -1,8 +1,6 @@
 "use client";
 
-// src/components/booking/MyBookingsView.tsx
-
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,14 +9,16 @@ import {
   CalendarDays,
   CalendarX2,
   Clock,
+  CheckCircle,
   Loader2,
   RefreshCw,
   XCircle,
-  CheckCircle,
 } from "lucide-react";
 
 import { jsPDF } from "jspdf";
 
+import { authClient } from "@/lib/auth-client";
+import { fetchMyBookings, type Booking } from "@/app/(dashboard)/dashboard/my-bookings/api";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -32,25 +32,65 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { Textarea } from "@/components/ui/textarea";
-import { useSession } from "@/lib/auth-client";
-import {
-  fetchMyBookings,
-  formatBookingDate,
-  formatBookingTimeRange,
-  formatPrice,
-  getApiBaseUrl,
-  type Booking,
-  type BookingStatus,
-} from "@/lib/booking";
 
-const STATUS_STYLES: Record<BookingStatus, string> = {
+
+
+function formatPrice(value: number): string {
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
+}
+
+function formatBookingDate(value: unknown): string {
+  const raw = String(value ?? "");
+  if (!raw) return "Date not specified";
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatBookingTime(value: unknown): string {
+  const raw = String(value ?? "");
+  if (!raw) return "";
+  const clock = /^(\d{1,2}):(\d{2})/.exec(raw);
+  if (clock) {
+    const hour = Number(clock[1]);
+    const minute = clock[2];
+    const suffix = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+    return `${displayHour}:${minute} ${suffix}`;
+  }
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatBookingTimeRange(booking: Pick<Booking, "startTime" | "endTime">): string {
+  const start = formatBookingTime(booking.startTime);
+  const end = formatBookingTime(booking.endTime);
+  if (start && end) return `${start} – ${end}`;
+  return start || end || "Time not specified";
+}
+
+
+
+const STATUS_STYLES: Record<Booking["status"], string> = {
   Pending: "border-amber-500/30 bg-amber-500/10 text-amber-500 dark:text-amber-300",
   Confirmed: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
   Cancelled: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-300",
   Completed: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
 };
 
-function StatusBadge({ status }: { status: BookingStatus }) {
+function StatusBadge({ status }: { status: Booking["status"] }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}
@@ -86,8 +126,8 @@ const STUDIO_IMAGE_FALLBACK =
   "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=800&auto=format&fit=crop";
 
 function BookingStudioImage({ src, alt }: { src: string; alt: string }) {
-  const [imageSrc, setImageSrc] = useState(src);
-
+  const [imageSrc, setImageSrc] = useState(src || STUDIO_IMAGE_FALLBACK);
+  
   return (
     <Image
       src={imageSrc}
@@ -96,11 +136,26 @@ function BookingStudioImage({ src, alt }: { src: string; alt: string }) {
       unoptimized
       sizes="(max-width: 640px) 100vw, 160px"
       className="object-cover transition-transform duration-500 group-hover:scale-105"
-      onError={() => {
-        setImageSrc(STUDIO_IMAGE_FALLBACK);
-      }}
+      onError={() => setImageSrc(STUDIO_IMAGE_FALLBACK)}
     />
   );
+}
+
+async function authenticatedFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  const baseUrl = (process.env.NEXT_PUBLIC_SERVER_BASE_URL ?? "").replace(/\/+$/, "");
+  const { data } = await authClient.token();
+  const token = data?.token ?? null;
+  const headers = new Headers(init.headers);
+  headers.set("Accept", "application/json");
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  return fetch(`${baseUrl}${input}`, {
+    ...init,
+    credentials: "include",
+    cache: "no-store",
+    headers,
+  });
 }
 
 function downloadInvoice(booking: Booking) {
@@ -194,18 +249,21 @@ function BookingActions({
   );
 }
 
+
+
 export default function MyBookingsView() {
   const router = useRouter();
-  const { data: session, isPending: sessionPending } = useSession();
-  const userEmail = session?.user?.email ?? "";
+
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+
 
   const [confirmTarget, setConfirmTarget] = useState<Booking | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -218,80 +276,80 @@ export default function MyBookingsView() {
     isSubmitting: false,
   });
 
-  async function loadBookings() {
-    if (sessionPending || !userEmail) {
-      setLoading(false);
-      return;
-    }
 
-    try {
-      setLoading(true);
+
+  const loadBookings = useCallback(
+    async (signal?: AbortSignal) => {
       setError(null);
+      try {
+        setLoading(true);
+        const data = await fetchMyBookings({ signal });
+        setBookings(data);
+      } catch (err) {
 
-      const fetchedBookings = await fetchMyBookings();
+        if (err instanceof Error && err.name === "AbortError") return;
 
-      const safeBookings = userEmail
-        ? fetchedBookings.filter(
-            (b) =>
-              true,
-          )
-        : [];
+        const apiErr = err as { status?: number; message?: string };
 
-      setBookings(safeBookings);
-      setError(null);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load bookings.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
+        if (apiErr.status === 401 || apiErr.status === 403) {
+          router.push("/login?redirect=/dashboard/my-bookings");
+          return;
+        }
 
+        setError(apiErr.message ?? "Failed to load bookings.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [router]
+  );
+
+  
   useEffect(() => {
-    loadBookings();
-  }, [sessionPending, userEmail]);
+    const controller = new AbortController();
+    
+    const fetchData = async () => {
+      await loadBookings(controller.signal);
+    };
+    
+    fetchData();
 
-  const refreshBookings = () => {
+    return () => controller.abort();
+  }, [loadBookings]);
+
+  const refreshBookings = useCallback(() => {
     loadBookings();
-  };
+  }, [loadBookings]);
+
+ 
 
   async function handleConfirmBooking() {
     if (!confirmTarget) return;
     setIsConfirming(true);
     setConfirmError(null);
-
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(
-        `${baseUrl}/booking/${encodeURIComponent(confirmTarget.id)}/confirm`,
-        {
-          method: "PATCH",
-          credentials: "include",
-          cache: "no-store",
-          headers: { Accept: "application/json" },
-        },
+      const res = await authenticatedFetch(
+        `/booking/${encodeURIComponent(confirmTarget.id)}/confirm`,
+        { method: "PATCH" }
       );
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
         const message =
           typeof body?.message === "string"
             ? body.message
-            : `Could not confirm this booking (${response.status}).`;
+            : `Could not confirm this booking (${res.status}).`;
         throw new Error(message);
       }
-
       toast.add({
         type: "success",
         title: "Booking Confirmed",
         description: `${confirmTarget.studioName} is now confirmed.`,
       });
-
       setConfirmTarget(null);
       setConfirmError(null);
-
       await loadBookings();
+
+      await router.refresh();
     } catch (err) {
       const message =
         err instanceof Error
@@ -308,27 +366,68 @@ export default function MyBookingsView() {
     }
   }
 
+ 
+
+  async function handleCancelBooking() {
+    if (!cancelTarget) return;
+    const booking = cancelTarget;
+    setIsCancelling(true);
+    setCancelError(null);
+    try {
+      const res = await authenticatedFetch(
+        `/booking/${encodeURIComponent(booking.id)}/cancel`,
+        { method: "PATCH" }
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        const message =
+          typeof body?.message === "string"
+            ? body.message
+            : `Could not cancel this booking (${res.status}).`;
+        throw new Error(message);
+      }
+      toast.add({
+        type: "success",
+        title: "Booking cancelled",
+        description: `${booking.studioName} on ${formatBookingDate(booking.date)} has been cancelled.`,
+      });
+      setCancelTarget(null);
+      await loadBookings();
+   
+      await router.refresh();
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while cancelling this booking.";
+      setCancelError(message);
+      toast.add({
+        type: "error",
+        title: "Cancellation failed",
+        description: message,
+      });
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
+  
+
   async function handleSubmitReview() {
     if (!review.target) return;
     const targetBooking = review.target;
     setReview((prev) => ({ ...prev, isSubmitting: true }));
-
     try {
-      const res = await fetch(
-        `${getApiBaseUrl()}/studio/${encodeURIComponent(
-          targetBooking.studioId || targetBooking.id,
-        )}/review`,
+      const res = await authenticatedFetch(
+        `/studio/${encodeURIComponent(targetBooking.studioId ?? "")}/review`,
         {
           method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             rating: Number(review.rating),
             comment: review.comment,
           }),
-        },
+        }
       );
       if (!res.ok) throw new Error("Failed to submit review");
 
@@ -337,7 +436,6 @@ export default function MyBookingsView() {
         title: "Review submitted",
         description: "Thank you for your feedback!",
       });
-
       setReview((prev) => ({
         ...prev,
         target: null,
@@ -345,7 +443,6 @@ export default function MyBookingsView() {
         comment: "",
         isSubmitting: false,
       }));
-
       setBookings((prev) =>
         prev.map((b) =>
           b.id === targetBooking.id
@@ -356,8 +453,8 @@ export default function MyBookingsView() {
                   comment: review.comment,
                 },
               }
-            : b,
-        ),
+            : b
+        )
       );
     } catch (err) {
       toast.add({
@@ -375,134 +472,62 @@ export default function MyBookingsView() {
     setCancelTarget(null);
     setCancelError(null);
   };
-
   const closeConfirmDialog = () => {
     if (isConfirming) return;
     setConfirmTarget(null);
     setConfirmError(null);
   };
-
   const closeReviewDialog = () => {
     setReview((prev) => ({ ...prev, target: null }));
   };
 
-  async function handleCancelBooking() {
-    if (!cancelTarget) return;
-    const booking = cancelTarget;
-    setIsCancelling(true);
-    setCancelError(null);
-
-    try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(
-        `${baseUrl}/booking/${encodeURIComponent(booking.id)}/cancel`,
-        {
-          method: "PATCH",
-          credentials: "include",
-          cache: "no-store",
-          headers: { Accept: "application/json" },
-        },
-      );
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        const message =
-          typeof body?.message === "string"
-            ? body.message
-            : `Could not cancel this booking (${response.status}).`;
-        throw new Error(message);
-      }
-
-      toast.add({
-        type: "success",
-        title: "Booking cancelled",
-        description: `${booking.studioName} on ${formatBookingDate(booking.date)} has been cancelled.`,
-      });
-
-      setCancelTarget(null);
-
-      await loadBookings();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Something went wrong while cancelling this booking.";
-      setCancelError(message);
-      toast.add({
-        type: "error",
-        title: "Cancellation failed",
-        description: message,
-      });
-    } finally {
-      setIsCancelling(false);
-    }
-  }
-
-  const signInError = !sessionPending && !userEmail ? "Please sign in to view your bookings." : null;
-  const displayError = error ?? signInError;
-
   const showSkeleton = loading && bookings.length === 0;
-
-  const showLoginCTA = !sessionPending && !userEmail && !error && bookings.length === 0 && !loading;
+  const showEmpty = !loading && !error && bookings.length === 0;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 text-gray-900 dark:text-white">
-      {showLoginCTA && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center dark:border-white/5 dark:bg-[#121212]">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400">
-            <AlertCircle className="h-7 w-7" />
+      <header className="flex flex-col gap-4 border-b border-gray-200 pb-6 dark:border-white/5 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+              My Bookings
+            </h1>
+            {!loading && bookings.length > 0 && (
+              <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-300">
+                {bookings.length}
+                {bookings.length === 1 ? "booking" : "bookings"}
+              </span>
+            )}
           </div>
-          <h2 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
-            Please sign in to view your bookings
-          </h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-gray-500 dark:text-gray-400">
-            You need to be logged in to see your studio bookings.
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 md:text-base">
+            Track your studio sessions, approval status, and total booking cost.
           </p>
         </div>
-      )}
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={refreshBookings}
+            disabled={loading}
+            className="h-10 border-gray-200 bg-white text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+          <Link
+            href="/studios"
+            className="h-10 bg-violet-600 text-white hover:bg-violet-700 transition-colors px-4 py-2 rounded-lg font-medium"
+          >
+            Explore Studios
+          </Link>
+        </div>
+      </header>
 
-      {!showLoginCTA && (
-        <header className="flex flex-col gap-4 border-b border-gray-200 pb-6 dark:border-white/5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-                My Bookings
-              </h1>
-              {!loading && bookings.length > 0 && (
-                <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-300">
-                  {bookings.length}
-                  {bookings.length === 1 ? "booking" : "bookings"}
-                </span>
-              )}
-            </div>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 md:text-base">
-              Track your studio sessions, approval status, and total booking cost.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={refreshBookings}
-              disabled={loading}
-              className="h-10 border-gray-200 bg-white text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-            <Link
-              href="/studios"
-              className="h-10 bg-violet-600 text-white hover:bg-violet-700 transition-colors px-4 py-2 rounded-lg font-medium"
-            >
-              Explore Studios
-            </Link>
-          </div>
-        </header>
-      )}
-
-      {displayError && !showSkeleton && !showLoginCTA && (
+      {error && !showSkeleton && (
         <div className="flex flex-col gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-600 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <AlertCircle className="h-5 w-5 shrink-0" />
-            <p className="text-sm">{displayError}</p>
+            <p className="text-sm">{error}</p>
           </div>
           <Button
             type="button"
@@ -526,10 +551,7 @@ export default function MyBookingsView() {
             >
               <div className="flex flex-col gap-5 p-4 sm:flex-row sm:items-center sm:p-5">
                 <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-white/5 dark:bg-white/5 sm:h-28 sm:w-40">
-                  <BookingStudioImage
-                    src={booking.image}
-                    alt={booking.studioName}
-                  />
+                  <BookingStudioImage src={booking.image} alt={booking.studioName} />
                 </div>
 
                 <div className="min-w-0 flex-1 space-y-3">
@@ -537,7 +559,7 @@ export default function MyBookingsView() {
                     <h2 className="truncate text-lg font-semibold text-gray-900 dark:text-white">
                       {booking.studioName}
                     </h2>
-                    <StatusBadge status={booking.status as BookingStatus} />
+                    <StatusBadge status={booking.status} />
                   </div>
 
                   <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
@@ -574,7 +596,7 @@ export default function MyBookingsView() {
         </div>
       )}
 
-      {!showSkeleton && !displayError && bookings.length === 0 && !showLoginCTA && (
+      {showEmpty && (
         <EmptyState
           icon={CalendarX2}
           title="No bookings yet"
@@ -584,6 +606,7 @@ export default function MyBookingsView() {
         />
       )}
 
+      
       <Dialog
         open={cancelTarget !== null}
         onOpenChange={(nextOpen) => {
@@ -643,6 +666,7 @@ export default function MyBookingsView() {
         </DialogContent>
       </Dialog>
 
+     
       <Dialog
         open={confirmTarget !== null}
         onOpenChange={(nextOpen) => {
@@ -705,6 +729,7 @@ export default function MyBookingsView() {
         </DialogContent>
       </Dialog>
 
+      
       <Dialog
         open={review.target !== null}
         onOpenChange={(nextOpen) => {
@@ -744,7 +769,7 @@ export default function MyBookingsView() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => closeReviewDialog()}
+              onClick={closeReviewDialog}
               className="h-10 border-gray-200 bg-transparent text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
             >
               Cancel

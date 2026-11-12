@@ -2,18 +2,62 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; 
 import { AlertCircle, Loader2 } from "lucide-react";
 
 import { useSession } from "@/lib/auth-client";
-import { getStudioById } from "@/lib/studios";
-import type { Studio } from "@/lib/types";
 import StudioForm from "@/app/(dashboard)/dashboard/add-studio/StudioForm";
 import { Button } from "@/components/ui/button";
 
-// Client component that renders the edit studio view for a given studio id.
-// It handles session loading, authentication, fetching the studio,
-// ownership checking, and rendering the shared StudioForm in edit mode.
+type Studio = {
+  _id?: string;
+  id?: string;
+  title?: string;
+  category?: string;
+  location?: string;
+  overview?: string;
+  description?: string;
+  imageUrl?: string;
+  image?: string;
+  hourlyRate?: number | string;
+  securityDeposit?: number | string;
+  maxCapacity?: number | string;
+  capacity?: number | string;
+  rating?: number | string;
+  reviews?: number | string;
+  reviewList?: { user: string; rating: number; comment: string }[];
+  price?: number | string;
+  amenities?: string[] | string;
+  ownerEmail?: string;
+};
+
+async function fetchStudioById(id: string): Promise<Studio | null> {
+  const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
+  if (!baseUrl) return null;
+  try {
+    const res = await fetch(`${baseUrl}/studio/${encodeURIComponent(id)}`, {
+      credentials: "include",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    const data = await res.json();
+    const studio =
+      Array.isArray(data)
+        ? data[0]
+        : data?.data || data?.studio || data;
+    return studio && typeof studio === "object" && (studio as Studio)._id
+      ? (studio as Studio)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+
 export default function EditStudioView({ id }: { id: string }) {
+  const router = useRouter();
   const { data: session, isPending: sessionPending } = useSession();
 
   const [studio, setStudio] = useState<Studio | null>(null);
@@ -27,17 +71,22 @@ export default function EditStudioView({ id }: { id: string }) {
   useEffect(() => {
     const studioId = String(id ?? "");
     if (!studioId) {
-      setError("Studio ID is missing.");
-      setLoading(false);
-      return;
+
+      const timer = setTimeout(() => {
+        setError("Studio ID is missing.");
+        setLoading(false);
+      }, 0);
+      return () => clearTimeout(timer);
     }
 
     let active = true;
-    setLoading(true);
+    
 
-    // GET /studio/:id with credentials: include
-    getStudioById(studioId)
-      .then((fetched) => {
+    const loadStudio = async () => {
+      setLoading(true);
+
+      try {
+        const fetched = await fetchStudioById(studioId);
         if (!active) return;
 
         if (!fetched) {
@@ -54,34 +103,36 @@ export default function EditStudioView({ id }: { id: string }) {
         }
 
         setStudio(fetched);
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         if (!active) return;
         setError(err instanceof Error ? err.message : "Failed to load studio.");
         setLoading(false);
-      })
-      .finally(() => {
+      } finally {
         if (active) setLoading(false);
-      });
+      }
+    };
+
+    loadStudio();
 
     return () => {
       active = false;
     };
   }, [id, userEmail]);
 
-  // While the session is still resolving, show a placeholder skeleton.
+
   if (sessionPending) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
+
+      <div className="flex min-h-100 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
       </div>
     );
   }
 
-  // User is not logged in.
+
   if (!userEmail) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center text-center">
+      <div className="flex min-h-100 flex-col items-center justify-center text-center">
         <AlertCircle className="h-10 w-10 mb-3 text-gray-400" />
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
           Please log in
@@ -99,22 +150,24 @@ export default function EditStudioView({ id }: { id: string }) {
     );
   }
 
-  // Studio could not be found.
+
   if (notFound) {
     return (
       <div className="mx-auto max-w-4xl py-12 px-4 text-center">
         <div className="flex flex-col items-center gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 text-rose-600 dark:text-rose-300">
           <AlertCircle className="h-6 w-6 shrink-0" />
           <p className="text-sm">Studio not found</p>
+
           <p className="text-xs text-muted-foreground">
-            The studio you're looking for doesn't exist or was removed.
+            The studio you&apos;re looking for doesn&apos;t exist or was removed.
           </p>
         </div>
         <Button
           type="button"
           variant="outline"
           className="mt-4 h-9 border-rose-500/30 bg-transparent text-rose-600 hover:bg-rose-500/15 dark:text-rose-200 dark:hover:text-white"
-          onClick={() => window.location.href = "/dashboard/my-studio"}
+
+          onClick={() => router.push("/dashboard/my-studio")}
         >
           Back to My Studio
         </Button>
@@ -122,7 +175,7 @@ export default function EditStudioView({ id }: { id: string }) {
     );
   }
 
-  // The logged-in user does not own this studio.
+  
   if (notOwner) {
     return (
       <div className="mx-auto max-w-4xl py-12 px-4 text-center">
@@ -143,7 +196,7 @@ export default function EditStudioView({ id }: { id: string }) {
     );
   }
 
-  // A network or fetch error occurred.
+
   if (error) {
     return (
       <div className="mx-auto max-w-md py-12 px-4">
@@ -155,7 +208,8 @@ export default function EditStudioView({ id }: { id: string }) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => window.location.href = "/dashboard/my-studio"}
+
+            onClick={() => router.push("/dashboard/my-studio")}
             className="h-9 border-rose-500/30 bg-transparent text-rose-600 hover:bg-rose-500/15 dark:text-rose-200 dark:hover:text-white"
           >
             Back to My Studio
@@ -165,16 +219,17 @@ export default function EditStudioView({ id }: { id: string }) {
     );
   }
 
-  // Still loading the studio data.
+
   if (loading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
+
+      <div className="flex min-h-100 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
       </div>
     );
   }
 
-  // The user is the owner: render the shared StudioForm in edit mode.
+
   return studio ? (
     <StudioForm initialStudio={studio} />
   ) : null;

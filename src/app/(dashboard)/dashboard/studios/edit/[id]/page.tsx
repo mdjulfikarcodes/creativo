@@ -1,17 +1,11 @@
 "use client";
-
 import { Suspense } from "react";
 import { useParams } from "next/navigation";
-
 import EditStudioView from "@/components/studio/EditStudioView";
 
-// Page for editing an existing studio.
-// Reads the studio id from the URL and renders the EditStudioView client
-// component inside a Suspense boundary with a skeleton fallback.
 export default function EditStudioPage() {
   const { id } = useParams();
 
-  // Coerce the URL param to a plain string.
   const studioId = id ? String(id) : "";
 
   if (!studioId) {
@@ -36,7 +30,7 @@ export default function EditStudioPage() {
   );
 }
 
-// Skeleton shown while the edit page content is loading.
+
 function EditStudioSkeleton() {
   return (
     <div className="max-w-4xl mx-auto space-y-6 py-12 px-4">

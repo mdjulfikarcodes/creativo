@@ -10,7 +10,7 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
-  // Simple email format validation.
+ 
   function isValidEmail(value: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(value.trim());
@@ -27,8 +27,6 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      // Simulate an API call with a 1 second delay.
-      // In a real app, this would call your backend's forgot-password endpoint.
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       setSent(true);
@@ -61,7 +59,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         {sent ? (
-          // Success state: reset link sent.
+
           <div className="space-y-6">
             <div className="flex items-center justify-center">
               <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
@@ -73,7 +71,7 @@ export default function ForgotPasswordPage() {
               Reset link sent
             </h2>
             <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-              We've emailed you a link to reset your password. Please check your inbox.
+              We&apos;ve emailed you a link to reset your password. Please check your inbox.
             </p>
 
             <Link
@@ -84,7 +82,7 @@ export default function ForgotPasswordPage() {
             </Link>
           </div>
         ) : (
-          // Form state: enter email to receive reset link.
+ 
           <div className="space-y-5">
             <h1 className="text-xl font-semibold text-center text-gray-900 dark:text-white mb-8">
               Forgot Password

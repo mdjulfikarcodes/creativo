@@ -1,18 +1,16 @@
 "use client";
 
 import { createAuthClient } from "better-auth/react";
-import { inferAdditionalFields } from "better-auth/client/plugins";
-import type { Auth } from "@/lib/auth";
+import { inferAdditionalFields, jwtClient } from "better-auth/client/plugins";
+import type { auth } from "@/lib/auth";
 
 export const authClient = createAuthClient({
-  // Better Auth server runs on port 5000, so baseURL points directly to the backend URL.
-  baseURL: process.env.NEXT_PUBLIC_SERVER_BASE_URL || "http://localhost:5000",
+  baseURL: process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3000",
   plugins: [
-    inferAdditionalFields<Auth>(),
+    inferAdditionalFields<typeof auth>(),
+    jwtClient(),
   ],
-  fetchOptions: {
-    credentials: "include",
-  },
+ 
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;

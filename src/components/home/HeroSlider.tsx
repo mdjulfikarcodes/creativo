@@ -85,10 +85,10 @@ export default function HeroSlider() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30"></div>
             </div>
 
-            {/* Content */}
+
             <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto mt-10">
-              
-              {/* Badge */}
+
+
               <span className="mb-6 inline-block rounded-md bg-[#8b5cf6] px-3 py-1 text-xs font-bold tracking-widest text-white uppercase">
                 {slide.badge}
               </span>
@@ -99,12 +99,12 @@ export default function HeroSlider() {
                 {slide.title2}
               </h1>
 
-              {/* Description */}
+
               <p className="max-w-2xl text-base sm:text-lg text-gray-300 mb-10 leading-relaxed">
                 {slide.description}
               </p>
 
-              {/* Buttons */}
+
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <Link
                   href="/studios"
@@ -115,7 +115,7 @@ export default function HeroSlider() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
                 </Link>
-                
+
               </div>
             </div>
           </SwiperSlide>
@@ -135,7 +135,7 @@ export default function HeroSlider() {
 
       <div className="custom-pagination absolute bottom-8 left-0 right-0 z-20 flex justify-center gap-2"></div>
 
-      {/* CSS Override for active pagination dot (Swiper default active dot style) */}
+
       <style jsx global>{`
         .custom-pagination .swiper-pagination-bullet {
           width: 8px;
@@ -150,7 +150,8 @@ export default function HeroSlider() {
           border-radius: 12px;
           background-color: #8b5cf6;
         }
-      `}</style>
+      `}
+      </style>
     </div>
   );
 }

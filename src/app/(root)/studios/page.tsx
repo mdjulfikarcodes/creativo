@@ -1,23 +1,33 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 
 import StudioCard from "@/components/cards/StudioCard";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
-import { parseStudioList } from "@/lib/studios";
-import type { Studio } from "@/lib/types";
 
-// Backend response shape: { data: Studio[], meta: { totalPages, ... } }
-type StudioMeta = {
-  totalPages: number;
-};
-
-type StudioPageResponse = {
-  data?: Studio[];
-  meta?: StudioMeta;
+type Studio = {
+  _id?: string;
+  id?: string;
+  title?: string;
+  category?: string;
+  location?: string;
+  overview?: string;
+  description?: string;
+  imageUrl?: string;
+  image?: string;
+  hourlyRate?: number | string;
+  securityDeposit?: number | string;
+  maxCapacity?: number | string;
+  capacity?: number | string;
+  rating?: number | string;
+  reviews?: number | string;
+  reviewList?: { user: string; rating: number; comment: string }[];
+  price?: number | string;
+  amenities?: string[] | string;
+  ownerEmail?: string;
 };
 
 const LIMIT = 9;
@@ -47,29 +57,29 @@ function StudiosList() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // URL search params: page, category, search
+ 
   const page = Number(searchParams.get("page")) || 1;
   const categoryFromUrl = searchParams.get("category") || "";
   const searchFromUrl = searchParams.get("search") || "";
 
-  // Filter state
+
   const [category, setCategory] = useState(categoryFromUrl);
   const [location, setLocation] = useState("");
   const [price, setPrice] = useState("");
   const [capacity, setCapacity] = useState("");
 
-  // Data and status state
+
   const [studios, setDataList] = useState<Studio[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Search input local state (value held before debounce)
+  
   const [searchInput, setSearchInput] = useState(searchFromUrl);
   const [debouncedSearch, setDebouncedSearch] = useState(searchFromUrl);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 500ms debounce: fix search value 500ms after typing, then call API
+  
   useEffect(() => {
     if (debounceTimer.current !== null) {
       clearTimeout(debounceTimer.current);
@@ -84,7 +94,7 @@ function StudiosList() {
     };
   }, [searchInput]);
 
-  // Fetch studios — useEffect + AbortController (cleanup aborts request)
+
   useEffect(() => {
     const abortController = new AbortController();
     let cancelled = false;
@@ -100,7 +110,7 @@ function StudiosList() {
       }
 
       try {
-        // Build query params: page, limit, category, search, location, price, capacity
+
         const params = new URLSearchParams();
         params.set("page", String(page));
         params.set("limit", String(LIMIT));
@@ -114,7 +124,7 @@ function StudiosList() {
           params.set("location", location);
         }
 
-        // Price filter: "0-2000" → minPrice / maxPrice
+   
         if (price) {
           const [minPrice, maxPrice] = price.split("-");
           if (minPrice) {
@@ -125,7 +135,7 @@ function StudiosList() {
           }
         }
 
-        // Capacity filter: "1-5" → minCapacity / maxCapacity
+
         if (capacity) {
           const [minCapacity, maxCapacity] = capacity.split("-");
           if (minCapacity) {
@@ -138,7 +148,6 @@ function StudiosList() {
 
         const url = `${baseUrl}/studio?${params.toString()}`;
 
-        // Fetch request — credentials: include so session/auth works with backend
         const response = await fetch(url, {
           credentials: "include",
           cache: "no-store",
@@ -150,14 +159,17 @@ function StudiosList() {
           throw new Error("Failed to load studios");
         }
 
-        const json: StudioPageResponse = await response.json();
+        const json = await response.json();
 
         if (cancelled) return;
 
-        // Parse response into Studio list
-        setDataList(parseStudioList(json?.data));
 
-        // Pagination page count from meta.totalPages
+        const rawList = Array.isArray(json)
+          ? json
+          : json?.data || json?.studios || [];
+        setDataList(rawList);
+
+      
         if (json?.meta && typeof json.meta.totalPages === "number") {
           setTotalPages(json.meta.totalPages);
         } else {
@@ -167,7 +179,7 @@ function StudiosList() {
         setError(null);
       } catch (err: unknown) {
         if (cancelled) return;
-        // Ignore abort errors
+        
         if (err instanceof DOMException && err.name === "AbortError") {
           return;
         }
@@ -181,14 +193,13 @@ function StudiosList() {
       }
     })();
 
-    // Cleanup: cancel request on unmount or dependency change
     return () => {
       cancelled = true;
       abortController.abort();
     };
   }, [page, category, debouncedSearch, location, price, capacity]);
 
-  // Update URL on page change
+
   const goToPage = (newPage: number) => {
     const validPage = Math.max(1, Math.min(newPage, totalPages));
     router.push(
@@ -196,7 +207,7 @@ function StudiosList() {
     );
   };
 
-  // Error state
+
   if (error) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center dark:border-white/5 dark:bg-[#121212]">
@@ -208,12 +219,12 @@ function StudiosList() {
     );
   }
 
-  // Loading state
+
   if (loading) {
     return <StudiosLoadingSkeleton />;
   }
 
-  // Empty state + CTA
+  
   if (studios.length === 0) {
     return (
       <EmptyState
@@ -226,7 +237,7 @@ function StudiosList() {
     );
   }
 
-  // Build page number list: 1, 2, 3 ... totalPages
+
   const pageNumbers: number[] = [];
   for (let i = 1; i <= totalPages; i = i + 1) {
     pageNumbers.push(i);
@@ -316,7 +327,8 @@ function StudiosLoadingSkeleton() {
           key={i}
           className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-white/5 dark:bg-[#121212]"
         >
-          <div className="aspect-[4/3] w-full bg-gray-200 dark:bg-slate-800" />
+   
+          <div className="aspect-4/3 w-full bg-gray-200 dark:bg-slate-800" />
           <div className="space-y-3 p-5">
             <div className="h-5 w-3/4 rounded bg-gray-200 dark:bg-slate-800" />
             <div className="h-4 w-1/2 rounded bg-gray-200 dark:bg-slate-800" />

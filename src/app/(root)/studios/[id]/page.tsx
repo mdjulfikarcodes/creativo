@@ -7,8 +7,63 @@ import { ArrowLeft, Check, MapPin, Star, Users, ShieldCheck } from "lucide-react
 import ClientImage from "@/components/shared/ClientImage";
 import BookingDialog from "@/components/booking/BookingDialog";
 import WriteReviewForm from "@/components/studio/WriteReviewForm";
-import { extractStudio, parseStudioList } from "@/lib/studios";
-import type { Studio } from "@/lib/types";
+
+type Review = {
+  user: string;
+  rating: number;
+  comment: string;
+};
+
+type Studio = {
+  _id?: string;
+  id?: string;
+  title?: string;
+  category?: string;
+  location?: string;
+  overview?: string;
+  description?: string;
+  imageUrl?: string;
+  image?: string;
+  images?: string[];
+  hourlyRate?: number | string;
+  securityDeposit?: number | string;
+  maxCapacity?: number | string;
+  capacity?: number | string;
+  rating?: number | string;
+  reviews?: number | string;
+  reviewList?: Review[];
+  price?: number | string;
+  amenities?: string[] | string;
+  ownerEmail?: string;
+};
+
+function toStudio(value: unknown): Studio | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const studio = value as Studio;
+  return studio._id || studio.id || studio.title ? studio : null;
+}
+
+function extractStudio(payload: unknown): Studio | null {
+  const direct = toStudio(payload);
+  if (direct) return direct;
+
+  if (Array.isArray(payload)) {
+    for (const item of payload) {
+      const studio = toStudio(item);
+      if (studio) return studio;
+    }
+    return null;
+  }
+
+  if (payload && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+    return toStudio(record.data) ?? toStudio(record.studio);
+  }
+
+  return null;
+}
 
 type StudioPageProps = {
   params: Promise<{ id: string }>;
@@ -19,7 +74,9 @@ async function getStudioData(id: string): Promise<Studio | null> {
   if (!baseUrl) return null;
 
   try {
-    const res = await fetch(`${baseUrl}/studio/${id}`, { cache: "no-store" });
+    const res = await fetch(`${baseUrl}/studio/${encodeURIComponent(id)}`, {
+      cache: "no-store",
+    });
     if (res.ok) {
       const studio = extractStudio(await res.json());
       if (studio) return studio;
@@ -29,7 +86,10 @@ async function getStudioData(id: string): Promise<Studio | null> {
   try {
     const listRes = await fetch(`${baseUrl}/studio`, { next: { revalidate: 60 } });
     if (listRes.ok) {
-      const dataList = parseStudioList(await listRes.json());
+      const dataListRaw = await listRes.json();
+      const dataList: Studio[] = Array.isArray(dataListRaw)
+        ? dataListRaw
+        : dataListRaw?.data || dataListRaw?.studios || [];
       const found = dataList.find(
         (studio) => (studio._id || studio.id) === id || String(studio._id) === String(id)
       );
@@ -79,19 +139,19 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
   unstable_noStore();
   const studio = await getStudioData(id);
 
-  // Real page is /dashboard/my-studio; /dashboard/my-listings does not exist
   if (!studio) redirect("/dashboard/my-studio");
 
   const imageUrl = studio.imageUrl || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04";
-  const images = Array.isArray((studio as any).images) ? (studio as any).images : [imageUrl];
+
+  const images = Array.isArray(studio.images) ? studio.images : [imageUrl];
   const title = studio.title || "Untitled Studio";
   const category = studio.category || "Studio";
-  
-  // Rating and reviews are dynamic
+
   const rating = studio.rating ? Number(studio.rating).toFixed(1) : "New";
   const reviews = studio.reviews || 0;
-  const reviewList = (studio as any).reviewList || [];
-  
+
+  const reviewList = studio.reviewList || [];
+
   const location = studio.location || "Location not specified";
   const hourlyRate = studio.hourlyRate || "0";
   const securityDeposit = studio.securityDeposit || "0";
@@ -112,13 +172,15 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
   return (
     <div className="mt-8">
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px] items-start">
-        
+
         <div className="min-w-0">
-          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-gray-200 bg-slate-900 dark:border-white/5">
+
+          <div className="relative aspect-16/10 w-full overflow-hidden rounded-2xl border border-gray-200 bg-slate-900 dark:border-white/5">
             {images.length > 1 ? (
               <div className="flex h-full w-full overflow-x-auto snap-x snap-mandatory">
                 {images.map((img: string, i: number) => (
-                  <ClientImage key={i} src={img} alt={title} unoptimized sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="h-full min-w-[100vw] shrink-0 snap-center object-cover" width={800} height={500} />
+
+                  <ClientImage key={i} src={img} alt={title} unoptimized sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="h-full min-w-screen shrink-0 snap-center object-cover" width={800} height={500} />
                 ))}
               </div>
             ) : (
@@ -186,7 +248,8 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
             <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">Customer Reviews</h2>
             <div className="space-y-4">
               {reviewList.length > 0 ? (
-                reviewList.map((rev: any, i: number) => (
+
+                reviewList.map((rev: Review, i: number) => (
                   <div key={i} className="p-4 border rounded-xl dark:border-white/10 bg-white dark:bg-[#121212]">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-semibold text-sm">{rev.user}</span>
@@ -231,12 +294,27 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
 
             <div className="flex items-center justify-between gap-4">
               <dt className="text-gray-500 dark:text-gray-400">Location</dt>
-              <dd className="max-w-[170px] truncate text-right font-medium text-gray-900 dark:text-white" title={location}>
+
+              <dd className="max-w-42.5 truncate text-right font-medium text-gray-900 dark:text-white" title={location}>
                 {location}
               </dd>
             </div>
 
           </dl>
+
+          <div className="mt-6 flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-white/5 dark:bg-[#0a0a0a]">
+            <div className="shrink-0 w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+              {studio.ownerEmail?.charAt(0).toUpperCase() || "H"}
+            </div>
+            <div className="flex flex-col">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                Hosted by
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {studio.ownerEmail || "Not specified"}
+              </p>
+            </div>
+          </div>
 
           <BookingDialog
             studioId={String(studio._id || studio.id || id)}
@@ -257,8 +335,6 @@ async function StudioDetails({ idPromise }: { idPromise: Promise<{ id: string }>
           </div>
         </aside>
       </div>
-
-
     </div>
   );
 }
@@ -267,7 +343,8 @@ function StudioDetailsSkeleton() {
   return (
     <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px] animate-pulse">
       <div className="space-y-6">
-        <div className="aspect-[16/10] w-full rounded-2xl bg-gray-200 dark:bg-slate-800" />
+
+        <div className="aspect-16/10 w-full rounded-2xl bg-gray-200 dark:bg-slate-800" />
         <div className="h-8 w-3/4 rounded bg-gray-200 dark:bg-slate-800" />
         <div className="h-4 w-1/2 rounded bg-gray-200 dark:bg-slate-800" />
         <div className="h-32 w-full rounded bg-gray-200 dark:bg-slate-800" />

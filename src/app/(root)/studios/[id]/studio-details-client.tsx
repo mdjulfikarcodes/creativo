@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   Check,
   MapPin,
@@ -12,7 +11,36 @@ import {
 import ClientImage from "@/components/shared/ClientImage";
 import BookingDialog from "@/components/booking/BookingDialog";
 import WriteReviewForm from "@/components/studio/WriteReviewForm";
-import type { Studio } from "@/lib/types";
+
+
+type Review = {
+  user: string;
+  rating: number;
+  comment: string;
+};
+
+type Studio = {
+  _id?: string;
+  id?: string;
+  title?: string;
+  category?: string;
+  location?: string;
+  overview?: string;
+  description?: string;
+  imageUrl?: string;
+  image?: string;
+  images?: string[];
+  hourlyRate?: number | string;
+  securityDeposit?: number | string;
+  maxCapacity?: number | string;
+  capacity?: number | string;
+  rating?: number | string;
+  reviews?: number | string;
+  reviewList?: Review[];
+  price?: number | string;
+  amenities?: string[] | string;
+  ownerEmail?: string;
+};
 
 export default function StudioDetailsClient({
   idPromise,
@@ -63,7 +91,7 @@ export default function StudioDetailsClient({
     return (
       <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px] animate-pulse">
         <div className="space-y-6">
-          <div className="aspect-[16/10] w-full rounded-2xl bg-gray-200 dark:bg-slate-800" />
+          <div className="aspect-16/10 w-full rounded-2xl bg-gray-200 dark:bg-slate-800" />
           <div className="h-8 w-3/4 rounded bg-gray-200 dark:bg-slate-800" />
           <div className="h-4 w-1/2 rounded bg-gray-200 dark:bg-slate-800" />
           <div className="h-32 w-full rounded bg-gray-200 dark:bg-slate-800" />
@@ -85,14 +113,18 @@ export default function StudioDetailsClient({
 
   const imageUrl =
     studio.imageUrl || studio.image || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04";
-  const images = Array.isArray((studio as any).images)
-    ? (studio as any).images
-    : [imageUrl];
+
+
+  const images = Array.isArray(studio.images) ? studio.images : [imageUrl];
+
   const title = studio.title || "Untitled Studio";
   const category = studio.category || "Studio";
   const rating = studio.rating ? Number(studio.rating).toFixed(1) : "New";
   const reviews = studio.reviews || 0;
-  const reviewList = (studio as any).reviewList || [];
+
+
+  const reviewList = studio.reviewList || [];
+
   const location = studio.location || "Location not specified";
   const hourlyRate = studio.hourlyRate || "0";
   const securityDeposit = studio.securityDeposit || "0";
@@ -117,7 +149,7 @@ export default function StudioDetailsClient({
     <div className="mt-8">
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px] items-start">
         <div className="min-w-0">
-          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-gray-200 bg-slate-900 dark:border-white/5">
+          <div className="relative aspect-16/10 w-full overflow-hidden rounded-2xl border border-gray-200 bg-slate-900 dark:border-white/5">
             {images.length > 1 ? (
               <div className="flex h-full w-full overflow-x-auto snap-x snap-mandatory">
                 {images.map((img: string, i: number) => (
@@ -127,7 +159,8 @@ export default function StudioDetailsClient({
                     alt={title}
                     unoptimized
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    className="h-full min-w-[100vw] shrink-0 snap-center object-cover"
+
+                    className="h-full min-w-screen shrink-0 snap-center object-cover"
                     width={800}
                     height={500}
                   />
@@ -210,7 +243,8 @@ export default function StudioDetailsClient({
             </h2>
             <div className="space-y-4">
               {reviewList.length > 0 ? (
-                reviewList.map((rev: any, i: number) => (
+
+                reviewList.map((rev: Review, i: number) => (
                   <div key={i} className="p-4 border rounded-xl dark:border-white/10 bg-white dark:bg-[#121212]">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-semibold text-sm">{rev.user}</span>
@@ -266,8 +300,9 @@ export default function StudioDetailsClient({
 
             <div className="flex items-center justify-between gap-4">
               <dt className="text-gray-500 dark:text-gray-400">Location</dt>
+
               <dd
-                className="max-w-[170px] truncate text-right font-medium text-gray-900 dark:text-white"
+                className="max-w-42.5 truncate text-right font-medium text-gray-900 dark:text-white"
                 title={location}
               >
                 {location}

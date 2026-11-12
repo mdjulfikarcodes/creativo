@@ -1,6 +1,32 @@
 import { StepCard } from "@/components/cards";
 import SectionHeading from "@/components/shared/SectionHeading";
-import { bookingSteps } from "@/lib/data/content";
+
+const bookingSteps = [
+  {
+    number: "01",
+    title: "Discover Verified Spaces",
+    description:
+      "Filter by ceiling height, lighting gear, power distro, and acoustic specs tailored to your creative brief.",
+  },
+  {
+    number: "02",
+    title: "Select Shoot Hours",
+    description:
+      "Choose your exact production timeline with instant transparent pricing, cleaning fees, and zero hidden markups.",
+  },
+  {
+    number: "03",
+    title: "Book Instantly",
+    description:
+      "Submit your request with project brief. Confirmed reservations receive immediate gate codes and host check-in specs.",
+  },
+  {
+    number: "04",
+    title: "Create & Produce",
+    description:
+      "Step into a fully prepped, sanitized workspace equipped with certified gear and comprehensive liability coverage.",
+  },
+];
 
 export default function HowBookingWorks() {
   return (

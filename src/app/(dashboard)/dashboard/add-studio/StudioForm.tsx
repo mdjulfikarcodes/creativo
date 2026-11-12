@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -22,9 +22,53 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/toast";
 import { toast as sonnerToast } from "sonner";
-import { useSession } from "@/lib/auth-client";
-import { getStudioById } from "@/lib/studios";
-import type { Studio } from "@/lib/types";
+import { authClient, useSession } from "@/lib/auth-client";
+
+type Studio = {
+  _id?: string;
+  id?: string;
+  title?: string;
+  category?: string;
+  location?: string;
+  overview?: string;
+  description?: string;
+  imageUrl?: string;
+  image?: string;
+  hourlyRate?: number | string;
+  securityDeposit?: number | string;
+  maxCapacity?: number | string;
+  capacity?: number | string;
+  rating?: number | string;
+  reviews?: number | string;
+  reviewList?: { user: string; rating: number; comment: string }[];
+  price?: number | string;
+  amenities?: string[] | string;
+  ownerEmail?: string;
+};
+
+async function fetchStudioById(id: string): Promise<Studio | null> {
+  const baseUrl = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
+  if (!baseUrl) return null;
+  try {
+    const res = await fetch(`${baseUrl}/studio/${encodeURIComponent(id)}`, {
+      credentials: "include",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    const data = await res.json();
+    const studio =
+      Array.isArray(data)
+        ? data[0]
+        : data?.data || data?.studio || data;
+    return studio && typeof studio === "object" && (studio as Studio)._id
+      ? (studio as Studio)
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
@@ -88,13 +132,13 @@ export default function StudioForm({ initialStudio }: { initialStudio?: Studio }
     };
   }, []);
 
-  const loadStudioFromUrl = () => {
+  const loadStudioFromUrl = useCallback(() => {
     if (!urlEditId) return;
 
     let active = true;
     setLoadingStudio(true);
 
-    getStudioById(urlEditId)
+    fetchStudioById(urlEditId)
       .then((studio) => {
         if (!active) return;
 
@@ -135,38 +179,41 @@ export default function StudioForm({ initialStudio }: { initialStudio?: Studio }
     return () => {
       active = false;
     };
-  };
+  }, [urlEditId, form, router]);
 
   useEffect(() => {
-    // When initialStudio is provided (edit page), pre-fill directly without fetching.
-    if (initialStudio) {
-      const amenities = Array.isArray(initialStudio.amenities)
-        ? initialStudio.amenities
-        : typeof initialStudio.amenities === "string"
-          ? initialStudio.amenities.split(",").map((item) => item.trim()).filter(Boolean)
-          : [];
+   
+    const timer = setTimeout(() => {
+      if (initialStudio) {
+        const amenities = Array.isArray(initialStudio.amenities)
+          ? initialStudio.amenities
+          : typeof initialStudio.amenities === "string"
+            ? initialStudio.amenities.split(",").map((item) => item.trim()).filter(Boolean)
+            : [];
 
-      const toFieldValue = (value: unknown) =>
-        value === undefined || value === null ? "" : String(value);
+        const toFieldValue = (value: unknown) =>
+          value === undefined || value === null ? "" : String(value);
 
-      form.reset({
-        title: initialStudio.title ?? "",
-        category: initialStudio.category ?? "",
-        location: initialStudio.location ?? "",
-        overview: initialStudio.overview ?? initialStudio.description ?? "",
-        hourlyRate: toFieldValue(initialStudio.hourlyRate),
-        securityDeposit: toFieldValue(initialStudio.securityDeposit),
-        maxCapacity: toFieldValue(initialStudio.maxCapacity),
-        imageUrl: initialStudio.imageUrl ?? initialStudio.image ?? "",
-        amenities,
-      });
-      setLoadingStudio(false);
-      return;
-    }
+        form.reset({
+          title: initialStudio.title ?? "",
+          category: initialStudio.category ?? "",
+          location: initialStudio.location ?? "",
+          overview: initialStudio.overview ?? initialStudio.description ?? "",
+          hourlyRate: toFieldValue(initialStudio.hourlyRate),
+          securityDeposit: toFieldValue(initialStudio.securityDeposit),
+          maxCapacity: toFieldValue(initialStudio.maxCapacity),
+          imageUrl: initialStudio.imageUrl ?? initialStudio.image ?? "",
+          amenities,
+        });
+        setLoadingStudio(false);
+        return;
+      }
 
-    // Otherwise load from the URL ?edit= query param (add-studio page).
-    return loadStudioFromUrl();
-  }, [initialStudio, urlEditId, form]);
+      loadStudioFromUrl();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [initialStudio, urlEditId, form, loadStudioFromUrl]);
 
   const AMENITIES = [
     "3-Wall Infinity Cyclorama", "Profoto Lighting Rig",
@@ -188,6 +235,9 @@ export default function StudioForm({ initialStudio }: { initialStudio?: Studio }
 
     setSubmitting(true);
 
+    const { data } = await authClient.token();
+    const token = data?.token;
+
     try {
       const payload = {
         ...values,
@@ -206,6 +256,7 @@ export default function StudioForm({ initialStudio }: { initialStudio?: Studio }
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -217,8 +268,8 @@ export default function StudioForm({ initialStudio }: { initialStudio?: Studio }
       }
 
       if (!result.ok) {
-        const data = await result.json().catch(() => null);
-        throw new Error(typeof data?.message === "string" ? data.message : isEdit ? "Failed to update studio." : "Failed to publish studio.");
+        const body = await result.json().catch(() => null);
+        throw new Error(typeof body?.message === "string" ? body.message : isEdit ? "Failed to update studio." : "Failed to publish studio.");
       }
 
       toast.add({
@@ -227,6 +278,7 @@ export default function StudioForm({ initialStudio }: { initialStudio?: Studio }
         description: isEdit ? "Your studio listing has been updated successfully." : "Your studio listing has been created successfully.",
       });
 
+      router.refresh();
       await router.push("/dashboard/my-studio");
     } catch (error) {
       toast.add({
@@ -241,7 +293,7 @@ export default function StudioForm({ initialStudio }: { initialStudio?: Studio }
 
   if (loadingStudio) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
+      <div className="flex min-h-100 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
       </div>
     );
@@ -338,7 +390,7 @@ export default function StudioForm({ initialStudio }: { initialStudio?: Studio }
                     <FormControl>
                       <Textarea
                         placeholder="Describe your studio, lighting, equipment, amenities, and ideal use."
-                        className="min-h-[120px] bg-background border-input resize-none"
+                        className="min-h-30 bg-background border-input resize-none"
                         {...field}
                       />
                     </FormControl>
@@ -427,15 +479,19 @@ export default function StudioForm({ initialStudio }: { initialStudio?: Studio }
                           const formData = new FormData();
                           formData.append("image", file);
                           const baseUrl = (process.env.NEXT_PUBLIC_SERVER_BASE_URL ?? "").replace(/\/+$/, "");
+                          const { data } = await authClient.token();
+                          const token = data?.token;
                           const res = await fetch(`${baseUrl}/upload`, {
                             method: "POST",
                             credentials: "include",
-                            headers: {},
+                            headers: {
+                              Authorization: `Bearer ${token}`,
+                            },
                             body: formData,
                           });
-                          const data = await res.json();
-                          if (res.ok && data?.url) {
-                            form.setValue("imageUrl", data.url);
+                          const body = await res.json();
+                          if (res.ok && body?.url) {
+                            form.setValue("imageUrl", body.url);
                             sonnerToast("Image uploaded");
                           } else {
                             sonnerToast.error("Upload failed");
@@ -463,9 +519,8 @@ export default function StudioForm({ initialStudio }: { initialStudio?: Studio }
                       key={img.id}
                       type="button"
                       onClick={() => form.setValue("imageUrl", img.url)}
-                      className={`relative overflow-hidden rounded-lg border-2 transition-all ${
-                        imageUrl === img.url ? "border-violet-500 ring-2 ring-violet-500/20" : "border-border hover:border-muted-foreground"
-                      }`}
+                      className={`relative overflow-hidden rounded-lg border-2 transition-all ${imageUrl === img.url ? "border-violet-500 ring-2 ring-violet-500/20" : "border-border hover:border-muted-foreground"
+                        }`}
                     >
                       <Image
                         src={img.url}
@@ -565,7 +620,7 @@ export default function StudioForm({ initialStudio }: { initialStudio?: Studio }
               <Button
                 type="submit"
                 disabled={submitting || uploading}
-                className="bg-violet-600 hover:bg-violet-700 text-white min-w-[150px] gap-2"
+                className="bg-violet-600 hover:bg-violet-700 text-white min-w-37.5 gap-2"
               >
                 {submitting ? (
                   <>

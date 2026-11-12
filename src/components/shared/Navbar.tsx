@@ -150,7 +150,7 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Center: Navigation Links */}
+    
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => {
             const isActive = checkIsActive(link.href);
@@ -174,10 +174,10 @@ export default function Navbar() {
           })}
         </div>
 
-        {/* Right: Actions (Theme Toggle + Auth) */}
+        
         <div className="flex items-center gap-3 md:gap-4">
           
-          {/* Theme Toggle Button */}
+          
           <button 
             type="button"
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
@@ -206,7 +206,7 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Authenticated State */}
+          
           {isPending ? (
             <div className="h-9 w-9 animate-pulse rounded-full bg-gray-200 dark:bg-white/10" />
           ) : isAuthenticated ? (
@@ -245,7 +245,7 @@ export default function Navbar() {
                 </svg>
               </button>
 
-              {/* Dropdown Menu */}
+              
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-3 w-56 rounded-xl border border-gray-200 bg-white py-2 shadow-2xl dark:border-white/10 dark:bg-[#121212]">
                   
@@ -258,15 +258,15 @@ export default function Navbar() {
                     </p>
                   </div>
 
-                  {/* Links */}
+                 
                   <Link href="/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">
                     Overview
                   </Link>
                   <Link href="/dashboard/add-studio" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">
-                    Add New Studio
+                    Add Studio
                   </Link>
                   <Link href="/dashboard/my-studio" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">
-                    My Studio Listings
+                    My Studio
                   </Link>
                   <Link href="/dashboard/my-bookings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white">
                     My Bookings
@@ -284,7 +284,7 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            /* Unauthenticated State */
+           
             <div className="hidden items-center gap-3 md:flex">
               <Link href="/login" className="text-sm font-medium text-gray-700 transition-colors hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
                 Login
@@ -297,7 +297,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu Panel */}
+ 
       {isMobileMenuOpen && (
         <div id="mobile-menu" className="border-t border-gray-200 bg-white md:hidden dark:border-white/5 dark:bg-[#0a0a0a]">
           <div className="space-y-1 px-4 py-4 sm:px-6">

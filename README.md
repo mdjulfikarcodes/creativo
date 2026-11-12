@@ -49,3 +49,16 @@ Follow these steps to run the frontend locally:
 ### 1. Clone the repository
 ```bash
 git clone https://github.com/mdjulfikarcodes/creativo.git
+
+---
+
+## 🔐 Test Credentials
+
+Use the following accounts to test the platform:
+
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **Host / Studio Owner** | host@creativo.com | `HostPass123` |
+| **Creator / Renter** | creator@creativo.com | `CreatorPass123` |
+
+> Both accounts are pre-verified. Google Social Login is also available via the OAuth provider configured in `.env`.

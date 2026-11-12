@@ -104,7 +104,7 @@ export default function Footer() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/newsletter`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // 👈 session cookie is included for the newsletter request
+        credentials: "include",
         body: JSON.stringify({ email }),
       });
       if (res.ok) {
