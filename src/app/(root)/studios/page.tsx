@@ -7,6 +7,7 @@ import { Search } from "lucide-react";
 import StudioCard from "@/components/cards/StudioCard";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
+import { Button } from "@/components/ui/button"; // 👈 বাটনের জন্য ইম্পোর্ট
 
 type Studio = {
   _id?: string;
@@ -57,29 +58,24 @@ function StudiosList() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
- 
   const page = Number(searchParams.get("page")) || 1;
   const categoryFromUrl = searchParams.get("category") || "";
   const searchFromUrl = searchParams.get("search") || "";
-
 
   const [category, setCategory] = useState(categoryFromUrl);
   const [location, setLocation] = useState("");
   const [price, setPrice] = useState("");
   const [capacity, setCapacity] = useState("");
 
-
   const [studios, setDataList] = useState<Studio[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  
   const [searchInput, setSearchInput] = useState(searchFromUrl);
   const [debouncedSearch, setDebouncedSearch] = useState(searchFromUrl);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  
   useEffect(() => {
     if (debounceTimer.current !== null) {
       clearTimeout(debounceTimer.current);
@@ -93,7 +89,6 @@ function StudiosList() {
       }
     };
   }, [searchInput]);
-
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -110,40 +105,23 @@ function StudiosList() {
       }
 
       try {
-
         const params = new URLSearchParams();
         params.set("page", String(page));
         params.set("limit", String(LIMIT));
-        if (category) {
-          params.set("category", category);
-        }
-        if (debouncedSearch) {
-          params.set("search", debouncedSearch);
-        }
-        if (location) {
-          params.set("location", location);
-        }
+        if (category) params.set("category", category);
+        if (debouncedSearch) params.set("search", debouncedSearch);
+        if (location) params.set("location", location);
 
-   
         if (price) {
           const [minPrice, maxPrice] = price.split("-");
-          if (minPrice) {
-            params.set("minPrice", minPrice);
-          }
-          if (maxPrice && maxPrice !== "+") {
-            params.set("maxPrice", maxPrice);
-          }
+          if (minPrice) params.set("minPrice", minPrice);
+          if (maxPrice && maxPrice !== "+") params.set("maxPrice", maxPrice);
         }
-
 
         if (capacity) {
           const [minCapacity, maxCapacity] = capacity.split("-");
-          if (minCapacity) {
-            params.set("minCapacity", minCapacity);
-          }
-          if (maxCapacity && maxCapacity !== "+") {
-            params.set("maxCapacity", maxCapacity);
-          }
+          if (minCapacity) params.set("minCapacity", minCapacity);
+          if (maxCapacity && maxCapacity !== "+") params.set("maxCapacity", maxCapacity);
         }
 
         const url = `${baseUrl}/studio?${params.toString()}`;
@@ -163,13 +141,11 @@ function StudiosList() {
 
         if (cancelled) return;
 
-
         const rawList = Array.isArray(json)
           ? json
           : json?.data || json?.studios || [];
         setDataList(rawList);
 
-      
         if (json?.meta && typeof json.meta.totalPages === "number") {
           setTotalPages(json.meta.totalPages);
         } else {
@@ -179,7 +155,6 @@ function StudiosList() {
         setError(null);
       } catch (err: unknown) {
         if (cancelled) return;
-        
         if (err instanceof DOMException && err.name === "AbortError") {
           return;
         }
@@ -199,7 +174,6 @@ function StudiosList() {
     };
   }, [page, category, debouncedSearch, location, price, capacity]);
 
-
   const goToPage = (newPage: number) => {
     const validPage = Math.max(1, Math.min(newPage, totalPages));
     router.push(
@@ -207,6 +181,16 @@ function StudiosList() {
     );
   };
 
+  // 👇 Clear Filters ফাংশন তৈরি করা হলো
+  const handleClearFilters = () => {
+    setSearchInput("");
+    setDebouncedSearch("");
+    setLocation("");
+    setPrice("");
+    setCapacity("");
+    setCategory("");
+    router.push("/studios"); // URL রিসেট
+  };
 
   if (error) {
     return (
@@ -219,24 +203,27 @@ function StudiosList() {
     );
   }
 
-
   if (loading) {
     return <StudiosLoadingSkeleton />;
   }
 
-  
   if (studios.length === 0) {
     return (
-      <EmptyState
-        icon={Search}
-        title="No studios match your search"
-        description="Try adjusting your filters or search terms."
-        ctaLabel="Clear filters"
-        ctaHref="/studios"
-      />
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <Search className="h-16 w-16 text-gray-400 dark:text-gray-600 mb-4" />
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No studios match your search</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Try adjusting your filters or search terms.</p>
+        
+        {/* 👇 কাস্টম Clear Filters বাটন যুক্ত করা হলো */}
+        <Button 
+          onClick={handleClearFilters}
+          className="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white px-6 py-2"
+        >
+          Clear filters
+        </Button>
+      </div>
     );
   }
-
 
   const pageNumbers: number[] = [];
   for (let i = 1; i <= totalPages; i = i + 1) {
@@ -251,7 +238,7 @@ function StudiosList() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search studios…"
-            className="h-11 rounded-lg border border-gray-200 bg-white pl-10 pr-4 text-sm dark:border-white/5 dark:bg-[#121212] dark:text-white"
+            className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-4 text-sm dark:border-white/5 dark:bg-[#121212] dark:text-white"
           />
         </div>
         <input
@@ -327,7 +314,6 @@ function StudiosLoadingSkeleton() {
           key={i}
           className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-white/5 dark:bg-[#121212]"
         >
-   
           <div className="aspect-4/3 w-full bg-gray-200 dark:bg-slate-800" />
           <div className="space-y-3 p-5">
             <div className="h-5 w-3/4 rounded bg-gray-200 dark:bg-slate-800" />

@@ -28,44 +28,6 @@ const nextConfig: NextConfig = {
     },
   ],
 
-
-  async rewrites() {
-    return [
-      {
-        source: "/booking/:path*",
-        destination: `${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/booking/:path*`,
-      },
-      {
-        source: "/booking",
-        destination: `${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/booking`,
-      },
-      {
-        source: "/wishlist/:path*",
-        destination: `${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/wishlist/:path*`,
-      },
-      {
-        source: "/wishlist",
-        destination: `${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/wishlist`,
-      },
-      {
-        source: "/studio/:path*",
-        destination: `${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/studio/:path*`,
-      },
-      {
-        source: "/studio",
-        destination: `${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/studio`,
-      },
-      {
-        source: "/newsletter",
-        destination: `${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/newsletter`,
-      },
-      {
-        source: "/upload",
-        destination: `${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/upload`,
-      },
-    ];
-  },
-
   turbopack: {
     rules: {
       "*.css": {
@@ -76,7 +38,6 @@ const nextConfig: NextConfig = {
   },
 
   images: {
-
     unoptimized: true, 
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com", port: "", pathname: "/**" },
